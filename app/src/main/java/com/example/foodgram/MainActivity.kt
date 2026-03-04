@@ -13,7 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 // Import your own files
 import com.example.foodgram.navigation.Home
-import com.example.foodgram.navigation.Profile
+import com.example.foodgram.navigation.SignUp
 import com.example.foodgram.navigation.MainFeed
 import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.HomeScreen
@@ -38,12 +38,12 @@ class MainActivity : ComponentActivity() {
                     ) {
                         // 3. Define the destinations
                         composable<Home> {
-                            HomeScreen(onNavigateToProfile = { navController.navigate(Profile) }, onNavigateToMainFeed = { navController.navigate(MainFeed) })
+                            HomeScreen(onNavigateToMainFeed = { navController.navigate(MainFeed)},onNavigateToSignUp={navController.navigate(SignUp)})
                         }
                         composable<MainFeed> {
                             MainFeedScreen()
                         }
-                        composable<Profile> {
+                        composable<SignUp> {
                             ProfileScreen(onBack = { navController.popBackStack() })
                         }
 

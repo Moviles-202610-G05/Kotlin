@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 object Home
 
 @Serializable
-object Profile
+object SignUp
 
 // Use 'data class' if you need to pass arguments (e.g., a post ID)
 @Serializable
