@@ -2,13 +2,14 @@ package com.example.foodgram.navigation
 
 import kotlinx.serialization.Serializable
 
-// Use 'object' for screens with no data
 @Serializable
 object Home
 
 @Serializable
-object Profile
+object Register
 
-// Use 'data class' if you need to pass arguments (e.g., a post ID)
+@Serializable
+object RestaurantRegister
+
 @Serializable
 object MainFeed

@@ -13,12 +13,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 // Import your own files
 import com.example.foodgram.navigation.Home
-import com.example.foodgram.navigation.Profile
+import com.example.foodgram.navigation.Register
 import com.example.foodgram.navigation.MainFeed
+import com.example.foodgram.navigation.RestaurantRegister
 import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.HomeScreen
-import com.example.foodgram.views.ProfileScreen
+import com.example.foodgram.views.RegistrationTypeView
 import com.example.foodgram.views.MainFeedScreen
+import com.example.foodgram.views.AccountType
+import com.example.foodgram.views.RestaurantRegisterView
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,13 +41,27 @@ class MainActivity : ComponentActivity() {
                     ) {
                         // 3. Define the destinations
                         composable<Home> {
-                            HomeScreen(onNavigateToProfile = { navController.navigate(Profile) }, onNavigateToMainFeed = { navController.navigate(MainFeed) })
+                            HomeScreen(onNavigateToProfile = { navController.navigate(Register) }, onNavigateToMainFeed = { navController.navigate(MainFeed) })
                         }
                         composable<MainFeed> {
                             MainFeedScreen()
                         }
-                        composable<Profile> {
-                            ProfileScreen(onBack = { navController.popBackStack() })
+                        composable<Register> {
+                            RegistrationTypeView(
+                                onBackClick = { navController.navigateUp() },
+                                onLoginClick = { navController.navigate(Home) },
+                                onContinueClick = { type ->
+                                    if (type == AccountType.OWNER) {
+                                        navController.navigate(RestaurantRegister)
+                                    } else {
+                                        // Handle Student registration or other types
+                                        navController.navigate(Home)
+                                    }
+                                }
+                            )
+                        }
+                        composable<RestaurantRegister> {
+                            RestaurantRegisterView()
                         }
 
                     }
