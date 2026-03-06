@@ -1,4 +1,4 @@
-package com.example.foodgram.views
+package com.example.foodgram.views.auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*

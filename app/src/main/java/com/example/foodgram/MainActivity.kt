@@ -11,14 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-// Import your own files
-import com.example.foodgram.navigation.Home
-import com.example.foodgram.navigation.Profile
-import com.example.foodgram.navigation.MainFeed
+import com.example.foodgram.navigation.*
 import com.example.foodgram.ui.theme.FoodGramTheme
-import com.example.foodgram.views.HomeScreen
-import com.example.foodgram.views.ProfileScreen
-import com.example.foodgram.views.MainFeedScreen
+import com.example.foodgram.views.feed.HomeScreen
+import com.example.foodgram.views.auth.LoginScreen
+// Import other screens as needed
+// import com.example.foodgram.views.profile.ProfileScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,27 +24,30 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FoodGramTheme {
-                // 1. Create the controller
                 val navController = rememberNavController()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // 2. Set up the NavHost (The Container)
                     NavHost(
                         navController = navController,
                         startDestination = Home,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        // 3. Define the destinations
                         composable<Home> {
-                            HomeScreen(onNavigateToProfile = { navController.navigate(Profile) }, onNavigateToMainFeed = { navController.navigate(MainFeed) })
+                            HomeScreen(
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMap = { navController.navigate(Map) }
+                            )
                         }
-                        composable<MainFeed> {
-                            MainFeedScreen()
+                        
+                        // Add other destinations here as you create them
+                        composable<Profile> { 
+                            // ProfileScreen(onBack = { navController.popBackStack() }) 
                         }
-                        composable<Profile> {
-                            ProfileScreen(onBack = { navController.popBackStack() })
-                        }
-
+                        composable<Search> { /* SearchScreen() */ }
+                        composable<Menu> { /* MenuScreen() */ }
+                        //composable<Map> { /* MapScreen() */ }
                     }
                 }
             }
