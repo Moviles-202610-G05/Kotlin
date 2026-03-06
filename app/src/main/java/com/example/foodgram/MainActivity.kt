@@ -15,9 +15,12 @@ import com.example.foodgram.navigation.*
 import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.feed.HomeScreen
 import com.example.foodgram.views.auth.LoginScreen
+import com.example.foodgram.views.auth.RegistrationTypeView
 import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
 import com.example.foodgram.navigation.Login
 import com.example.foodgram.navigation.SignUp
+import com.example.foodgram.views.RestaurantRegisterView
+import com.example.foodgram.views.auth.AccountType
 
 
 class MainActivity : ComponentActivity() {
@@ -34,34 +37,54 @@ class MainActivity : ComponentActivity() {
                         startDestination = Login,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable<Login>{
-                            LoginScreen(onNavigateToHome = { navController.navigate(Home)},onNavigateToSignUp={navController.navigate(SignUp)})
+                        composable<Login> {
+                            LoginScreen(
+                                onNavigateToHome = { navController.navigate(Home) },
+                                onNavigateToSignUp = { navController.navigate(Register) })
                         }
+                            composable<Register> {
+                                RegistrationTypeView(
+                                    onBackClick = { navController.navigateUp() },
+                                    onLoginClick = { navController.navigate(Home) },
+                                    onContinueClick = { type ->
+                                        if (type == AccountType.OWNER) {
+                                            navController.navigate(RestaurantRegister)
+                                        } else {
+                                            // Handle Student registration or other types
+                                            navController.navigate(Home)
+                                        }
+                                    }
+                                )
+                            }
+                            composable<RestaurantRegister> {
+                                RestaurantRegisterView()
+                            }
 
-                        composable<Home> {
-                            HomeScreen(
-                                onNavigateToSearch = { navController.navigate(Search) },
-                                onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(RestaurantsMap) }
-                            )
+                            composable<Home> {
+                                HomeScreen(
+                                    onNavigateToSearch = { navController.navigate(Search) },
+                                    onNavigateToProfile = { navController.navigate(Profile) },
+                                    onNavigateToMenu = { navController.navigate(Menu) },
+                                    onNavigateToMap = { navController.navigate(RestaurantsMap) }
+                                )
+                            }
+
+                            composable<Search> {
+                                SearchRestaurantsScreen(
+                                    onNavigateToFeed = { navController.navigate(Home) },
+                                    onNavigateToProfile = { navController.navigate(Profile) },
+                                    onNavigateToMenu = { navController.navigate(Menu) },
+                                    onNavigateToMap = { navController.navigate(RestaurantsMap) }
+                                )
+                            }
+
+                            composable<Profile> { /* TODO */ }
+                            composable<Menu> { /* TODO */ }
+                            composable<RestaurantsMap> { /* TODO */ }
                         }
-                        
-                        composable<Search> {
-                            SearchRestaurantsScreen(
-                                onNavigateToFeed = { navController.navigate(Home) },
-                                onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(RestaurantsMap) }
-                            )
-                        }
-                        
-                        composable<Profile> { /* TODO */ }
-                        composable<Menu> { /* TODO */ }
-                        composable<RestaurantsMap> { /* TODO */ }
                     }
                 }
             }
         }
     }
-}
+
