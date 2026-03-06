@@ -14,9 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.foodgram.navigation.*
 import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.feed.HomeScreen
-import com.example.foodgram.views.auth.LoginScreen
-// Import other screens as needed
-// import com.example.foodgram.views.profile.ProfileScreen
+import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
+import com.example.foodgram.navigation.Map
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,20 +33,25 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable<Home> {
                             HomeScreen(
-                                onNavigateToProfile = { navController.navigate(Profile) },
                                 onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
                                 onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(Map) }
+                                onNavigateToMap = { navController.navigate(RestaurantsMap) }
                             )
                         }
                         
-                        // Add other destinations here as you create them
-                        composable<Profile> { 
-                            // ProfileScreen(onBack = { navController.popBackStack() }) 
+                        composable<Search> {
+                            SearchRestaurantsScreen(
+                                onNavigateToFeed = { navController.navigate(Home) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMap = { navController.navigate(RestaurantsMap) }
+                            )
                         }
-                        composable<Search> { /* SearchScreen() */ }
-                        composable<Menu> { /* MenuScreen() */ }
-                        //composable<Map> { /* MapScreen() */ }
+                        
+                        composable<Profile> { /* TODO */ }
+                        composable<Menu> { /* TODO */ }
+                        composable<RestaurantsMap> { /* TODO */ }
                     }
                 }
             }

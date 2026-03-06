@@ -15,6 +15,9 @@ object Profile
 object Menu
 
 @Serializable
+object RestaurantsMap
+
+@Serializable
 object Map
 
 @Serializable
