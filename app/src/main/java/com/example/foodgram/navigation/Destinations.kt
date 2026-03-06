@@ -21,4 +21,7 @@ object RestaurantsMap
 object Map
 
 @Serializable
-object MainFeed
+object Login
+
+@Serializable
+object SignUp

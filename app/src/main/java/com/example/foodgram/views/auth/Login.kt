@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.example.foodgram.ui.theme.OrangeFoodGram
 
 @Composable
-fun HomeScreen(onNavigateToMainFeed: () -> Unit,onNavigateToSignUp: () -> Unit) {
+fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -84,7 +84,7 @@ fun HomeScreen(onNavigateToMainFeed: () -> Unit,onNavigateToSignUp: () -> Unit) 
 
         // Login Button
         Button(
-            onClick = onNavigateToMainFeed,
+            onClick = onNavigateToHome,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
