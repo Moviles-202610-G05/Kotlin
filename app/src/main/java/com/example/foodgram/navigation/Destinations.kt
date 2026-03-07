@@ -34,3 +34,6 @@ object RestaurantRegister
 
 @Serializable
 object MainFeed
+
+@Serializable
+object PersonalInfo
