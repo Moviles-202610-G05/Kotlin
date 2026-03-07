@@ -21,6 +21,9 @@ import com.example.foodgram.navigation.Login
 import com.example.foodgram.navigation.SignUp
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
+import com.example.foodgram.views.profile.UserScreen
+
+
 
 
 class MainActivity : ComponentActivity() {
@@ -78,7 +81,25 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            composable<Profile> { /* TODO */ }
+                            composable<Profile> {
+                                UserScreen(
+                                    onNavigateToOrders = { /* TODO: navController.navigate(Orders) */ },
+                                    onNavigateToReviews = { /* TODO */ },
+                                    onNavigateToSaved = { /* TODO */ },
+                                    onNavigateToNutritionGoals = { /* TODO */ },
+                                    onNavigateToPersonalInfo = { /* TODO */ },
+                                    onNavigateToPrivacySettings = { /* TODO */ },
+                                    onNavigateToHome = { navController.navigate(Home) },
+                                    onNavigateToSearch = { navController.navigate(Search) },
+                                    onNavigateToMenu = { navController.navigate(Menu) },
+                                    onNavigateToMap = { navController.navigate(RestaurantsMap) },
+                                    onLogout = {
+                                        navController.navigate(Login) {
+                                            popUpTo(0) { inclusive = true }
+                                        }
+                                    }
+                                )
+                            }
                             composable<Menu> { /* TODO */ }
                             composable<RestaurantsMap> { /* TODO */ }
                         }
