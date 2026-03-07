@@ -22,8 +22,7 @@ import com.example.foodgram.navigation.SignUp
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
 import com.example.foodgram.views.profile.UserScreen
-
-
+import com.example.foodgram.views.settings.PersonalInfoSettings
 
 
 class MainActivity : ComponentActivity() {
@@ -83,22 +82,25 @@ class MainActivity : ComponentActivity() {
 
                             composable<Profile> {
                                 UserScreen(
-                                    onNavigateToOrders = { /* TODO: navController.navigate(Orders) */ },
-                                    onNavigateToReviews = { /* TODO */ },
-                                    onNavigateToSaved = { /* TODO */ },
-                                    onNavigateToNutritionGoals = { /* TODO */ },
-                                    onNavigateToPersonalInfo = { /* TODO */ },
-                                    onNavigateToPrivacySettings = { /* TODO */ },
+                                    navController = navController,
                                     onNavigateToHome = { navController.navigate(Home) },
                                     onNavigateToSearch = { navController.navigate(Search) },
                                     onNavigateToMenu = { navController.navigate(Menu) },
                                     onNavigateToMap = { navController.navigate(RestaurantsMap) },
+                                    onNavigateToOrders = { /* TODO */ },
+                                    onNavigateToReviews = { /* TODO */ },
+                                    onNavigateToSaved = { /* TODO */ },
+                                    onNavigateToNutritionGoals = { /* TODO */ },
+                                    onNavigateToPrivacySettings = { /* TODO */ },
                                     onLogout = {
                                         navController.navigate(Login) {
                                             popUpTo(0) { inclusive = true }
                                         }
                                     }
                                 )
+                            }
+                            composable<PersonalInfo> {
+                                    PersonalInfoSettings(navController = navController)
                             }
                             composable<Menu> { /* TODO */ }
                             composable<RestaurantsMap> { /* TODO */ }

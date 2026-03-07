@@ -24,42 +24,54 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserScreen(
-    // Navegación entre pestañas inferiores
+    navController: NavController,
     onNavigateToHome: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToMenu: () -> Unit,
     onNavigateToMap: () -> Unit,
-    // Navegación interna del perfil
     onNavigateToOrders: () -> Unit,
     onNavigateToReviews: () -> Unit,
     onNavigateToSaved: () -> Unit,
     onNavigateToNutritionGoals: () -> Unit,
-    onNavigateToPersonalInfo: () -> Unit,
     onNavigateToPrivacySettings: () -> Unit,
     onLogout: () -> Unit
 ) {
-    // Metas del usuario
+    // Datos de perfil (estado interno)
+    var name by remember { mutableStateOf("Alex Johnson") }
+    var username by remember { mutableStateOf("@alex_j") }
+    var email by remember { mutableStateOf("alex.j@email.com") }
+    var location by remember { mutableStateOf("London, UK") }
+
+    // Metas del usuario (opcional, si las tienes)
     var caloriesGoal by remember { mutableStateOf(2000f) }
     var proteinGoal by remember { mutableStateOf(150f) }
     var carbsGoal by remember { mutableStateOf(200f) }
     var fatGoal by remember { mutableStateOf(67f) }
 
-    // Consumido hoy
     var caloriesConsumed by remember { mutableStateOf(1200f) }
     var proteinConsumed by remember { mutableStateOf(80f) }
     var carbsConsumed by remember { mutableStateOf(140f) }
     var fatConsumed by remember { mutableStateOf(35f) }
 
-    // Datos de perfil
-    var name by remember { mutableStateOf("Alex Johnson") }
-    var username by remember { mutableStateOf("@alex_j") }
-    var email by remember { mutableStateOf("alex.j@email.com") }
-    var location by remember { mutableStateOf("London, UK") }
+
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    LaunchedEffect(savedStateHandle) {
+        savedStateHandle?.getLiveData<Map<String, String>>("userInfo")?.observeForever { result ->
+            result?.let {
+                name = it["name"] ?: name
+                username = it["username"] ?: username
+                email = it["email"] ?: email
+                location = it["location"] ?: location
+            }
+        }
+    }
 
     Scaffold(
         containerColor = Color(0xFFF9F9F9),
@@ -161,7 +173,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // --- NOMBRE Y UBICACIÓN  ---
+            // --- NOMBRE Y UBICACIÓN ---
             Text(
                 text = name,
                 fontSize = 24.sp,
@@ -259,7 +271,19 @@ fun UserScreen(
                 title = "Personal Information",
                 subtitle = null,
                 bgColor = OrangeFoodGram.copy(alpha = 0.1f),
-                onTap = onNavigateToPersonalInfo
+                onTap = {
+                    // Guardar datos actuales en el savedStateHandle antes de navegar
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "personalInfoInput",
+                        mapOf(
+                            "name" to name,
+                            "username" to username,
+                            "email" to email,
+                            "location" to location
+                        )
+                    )
+                    navController.navigate(PersonalInfo)
+                }
             )
             SettingsItem(
                 icon = Icons.Default.Lock,
@@ -299,7 +323,7 @@ fun UserScreen(
     }
 }
 
-// ── WIDGETS ──────────────────────────────────────────────────────────────────
+// ── COMPONENTES AUXILIARES ───────────────────────────────────────────────────
 
 @Composable
 fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
@@ -318,7 +342,7 @@ fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
         Text(
             text = label,
             fontSize = 11.sp,
-            color = Color(0xFF607D8B),
+            color = Color(0xFF607D8B), // BlueGrey aproximado
             fontWeight = FontWeight.SemiBold
         )
     }
