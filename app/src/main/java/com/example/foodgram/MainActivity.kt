@@ -21,7 +21,9 @@ import com.example.foodgram.navigation.Login
 import com.example.foodgram.navigation.SignUp
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
-import com.example.foodgram.views.UserScreen
+import com.example.foodgram.views.profile.UserScreen
+
+
 
 
 class MainActivity : ComponentActivity() {
