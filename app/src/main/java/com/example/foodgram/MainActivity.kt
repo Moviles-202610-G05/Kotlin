@@ -18,7 +18,6 @@ import com.example.foodgram.views.auth.LoginScreen
 import com.example.foodgram.views.auth.RegistrationTypeView
 import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
 import com.example.foodgram.navigation.Login
-import com.example.foodgram.navigation.SignUp
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
 import com.example.foodgram.views.profile.UserScreen
