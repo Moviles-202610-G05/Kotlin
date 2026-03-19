@@ -1,9 +1,13 @@
 package com.example.foodgram.views.restaurants
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Location
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -11,15 +15,22 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.foodgram.ui.theme.FoodGramOrange
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,31 +40,57 @@ fun MapScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    
+    // Camera State
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(37.7749, -122.4194), 12f) // Default San Francisco
+    }
+
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted -> hasLocationPermission = isGranted }
+    )
+
+    LaunchedEffect(hasLocationPermission) {
+        if (hasLocationPermission) {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { location ->
+                    location?.let {
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(it.latitude, it.longitude), 15f)
+                    }
+                }
+        } else {
+            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // --- Map Placeholder ---
-        // In a real app, you'd use Google Maps Compose here.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFE0F2F1)) // Light blue-green map-like color
+        // --- REAL GOOGLE MAP ---
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+            uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
         ) {
-            // Simulated Map Markers
-            MapMarker(Modifier.align(Alignment.Center).offset(x = (-50).dp, y = (-100).dp), Icons.Default.LunchDining)
-            MapMarker(Modifier.align(Alignment.Center).offset(x = 60.dp, y = (-20).dp), Icons.Default.LocalPizza)
-            MapMarker(Modifier.align(Alignment.Center).offset(x = (-30).dp, y = 80.dp), Icons.Default.Restaurant)
+            // Real Markers
+            Marker(state = MarkerState(position = LatLng(37.78, -122.42)), title = "Burger Palace")
+            Marker(state = MarkerState(position = LatLng(37.77, -122.41)), title = "Lucky Sushi")
         }
 
-        // --- Top UI Overlay ---
+        // --- UI Overlays (Search, Chips, Side Buttons, Bottom Nav remain the same) ---
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 48.dp) // Adjusted for status bar/edge-to-edge
+            modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
         ) {
-            // Search Bar
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
@@ -63,15 +100,13 @@ fun MapScreen(
                     shadowElevation = 4.dp
                 ) {
                     TextField(
-                        value = "",
-                        onValueChange = {},
+                        value = "", onValueChange = {},
                         placeholder = { Text("Search for food...") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = FoodGramOrange) },
                         trailingIcon = { Icon(Icons.Default.Mic, contentDescription = null, tint = Color.Gray) },
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         ),
@@ -79,71 +114,37 @@ fun MapScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.Tune, contentDescription = "Filter")
-                    }
+                Surface(shape = RoundedCornerShape(12.dp), color = Color.White, shadowElevation = 4.dp, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = {}) { Icon(Icons.Outlined.Tune, contentDescription = "Filter") }
                 }
             }
 
-            // Category Chips
-            LazyRow(
-                modifier = Modifier.padding(top = 16.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    CategoryChip("All", Icons.Default.Restaurant, true)
-                }
-                item {
-                    CategoryChip("Burgers", Icons.Default.LunchDining, false)
-                }
-                item {
-                    CategoryChip("Pizza", Icons.Default.LocalPizza, false)
-                }
+            LazyRow(modifier = Modifier.padding(top = 16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { CategoryChip("All", Icons.Default.Restaurant, true) }
+                item { CategoryChip("Burgers", Icons.Default.LunchDining, false) }
+                item { CategoryChip("Pizza", Icons.Default.LocalPizza, false) }
             }
         }
 
-        // --- Side Buttons (Layer and Location) ---
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Column(modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MapSideButton(Icons.Default.Layers)
-            MapSideButton(Icons.Default.MyLocation)
+            MapSideButton(Icons.Default.MyLocation, onClick = {
+                if (hasLocationPermission) {
+                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
+                        location?.let { cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(it.latitude, it.longitude), 15f) }
+                    }
+                } else { launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
+            })
         }
 
-        // --- Bottom Cards Overlay ---
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 100.dp) // Leave space for bottom nav
-        ) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    RestaurantMapCard("Burger Palace", "4.8", "0.5 miles away", "TOP RATED")
-                }
-                item {
-                    RestaurantMapCard("Lucky Sushi", "4.7", "1.2 miles away", "FEATURED")
-                }
+        Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
+            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                item { RestaurantMapCard("Burger Palace", "4.8", "0.5 miles away", "TOP RATED") }
+                item { RestaurantMapCard("Lucky Sushi", "4.7", "1.2 miles away", "FEATURED") }
             }
         }
 
-        // --- Bottom Navigation Bar ---
-        Surface(
-            modifier = Modifier.align(Alignment.BottomCenter),
-            shadowElevation = 8.dp
-        ) {
+        Surface(modifier = Modifier.align(Alignment.BottomCenter), shadowElevation = 8.dp) {
             NavigationBar(containerColor = Color.White) {
                 NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, label = { Text("FEED") })
                 NavigationBarItem(selected = false, onClick = onNavigateToSearch, icon = { Icon(Icons.Default.Search, contentDescription = null) }, label = { Text("SEARCH") })
@@ -155,90 +156,30 @@ fun MapScreen(
     }
 }
 
-@Composable
-fun MapMarker(modifier: Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // Simple Marker pin shape using Box/Icons
-        Icon(
-            Icons.Default.LocationOn,
-            contentDescription = null,
-            tint = FoodGramOrange,
-            modifier = Modifier.size(48.dp)
-        )
-        Surface(
-            modifier = Modifier.size(24.dp).offset(y = (-4).dp),
-            shape = CircleShape,
-            color = Color.White
-        ) {
-            Icon(icon, contentDescription = null, tint = FoodGramOrange, modifier = Modifier.padding(4.dp))
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = if (selected) FoodGramOrange else Color.White,
-        shadowElevation = 2.dp,
-        onClick = {}
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (selected) Color.White else Color.Gray,
-                modifier = Modifier.size(18.dp)
-            )
+    Surface(shape = RoundedCornerShape(24.dp), color = if (selected) FoodGramOrange else Color.White, shadowElevation = 2.dp, onClick = {}) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = if (selected) Color.White else Color.Gray, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text,
-                color = if (selected) Color.White else Color.Black,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp
-            )
+            Text(text, color = if (selected) Color.White else Color.Black, fontWeight = FontWeight.Medium, fontSize = 14.sp)
         }
     }
 }
 
 @Composable
-fun MapSideButton(icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Surface(
-        shape = CircleShape,
-        color = Color.White,
-        shadowElevation = 4.dp,
-        modifier = Modifier.size(44.dp),
-        onClick = {}
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = Color.Black)
-        }
+fun MapSideButton(icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit = {}) {
+    Surface(shape = CircleShape, color = Color.White, shadowElevation = 4.dp, modifier = Modifier.size(44.dp), onClick = onClick) {
+        Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, tint = Color.Black) }
     }
 }
 
 @Composable
 fun RestaurantMapCard(name: String, rating: String, distance: String, tag: String) {
-    Surface(
-        modifier = Modifier.width(280.dp),
-        shape = RoundedCornerShape(32.dp),
-        color = Color.White,
-        shadowElevation = 6.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Circular Image Placeholder
-            Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray)
-            )
+    Surface(modifier = Modifier.width(280.dp), shape = RoundedCornerShape(32.dp), color = Color.White, shadowElevation = 6.dp) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.LightGray))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -248,17 +189,8 @@ fun RestaurantMapCard(name: String, rating: String, distance: String, tag: Strin
                     Text(" $distance", color = Color.Gray, fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    color = FoodGramOrange.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        tag,
-                        color = FoodGramOrange,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
+                Surface(color = FoodGramOrange.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)) {
+                    Text(tag, color = FoodGramOrange, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                 }
             }
         }
