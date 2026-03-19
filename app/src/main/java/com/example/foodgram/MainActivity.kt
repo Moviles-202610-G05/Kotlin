@@ -18,7 +18,6 @@ import com.example.foodgram.views.restaurants.MapScreen
 import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
 import com.example.foodgram.views.auth.LoginScreen
 import com.example.foodgram.views.auth.RegistrationTypeView
-import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
 import com.example.foodgram.navigation.Login
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
@@ -104,7 +103,14 @@ class MainActivity : ComponentActivity() {
                                     PersonalInfoSettings(navController = navController)
                             }
                             composable<Menu> { /* TODO */ }
-                            composable<RestaurantsMap> { /* TODO */ }
+                            composable<RestaurantsMap> {
+                                MapScreen(
+                                    onNavigateToFeed = { navController.navigate(Home) },
+                                    onNavigateToSearch = { navController.navigate(Search) },
+                                    onNavigateToProfile = { navController.navigate(Profile) },
+                                    onNavigateToMenu = { navController.navigate(Menu) }
+                                )
+                            }
                         }
                     }
                 }
