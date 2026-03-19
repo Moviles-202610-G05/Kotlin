@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,25 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
+data class MapRestaurant(
+    val name: String,
+    val rating: String,
+    val distance: String,
+    val tag: String,
+    val category: String,
+    val location: LatLng
+)
+
+val mapRestaurants = listOf(
+    MapRestaurant("Burger Palace", "4.8", "0.2 miles", "TOP RATED", "Burgers", LatLng(37.423, -122.085)),
+    MapRestaurant("Sushi Zen", "4.7", "0.5 miles", "FEATURED", "Sushi", LatLng(37.421, -122.084)),
+    MapRestaurant("Pizza Hub", "4.5", "0.8 miles", "POPULAR", "Pizza", LatLng(37.425, -122.088)),
+    MapRestaurant("Burger Joint", "4.2", "1.1 miles", "CHEAP", "Burgers", LatLng(37.419, -122.091)),
+    MapRestaurant("Italian Delight", "4.9", "0.3 miles", "NEW", "Italian", LatLng(37.422, -122.082))
+)
+
+val categories = listOf("All", "Burgers", "Pizza", "Sushi", "Italian")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
@@ -43,9 +63,19 @@ fun MapScreen(
     val context = LocalContext.current
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     
-    // Camera State
+    // State for filtering
+    var selectedCategory by remember { mutableStateOf("All") }
+    
+    // Filtered restaurants
+    val filteredRestaurants = remember(selectedCategory) {
+        if (selectedCategory == "All") mapRestaurants
+        else mapRestaurants.filter { it.category == selectedCategory }
+    }
+
+    // Camera State - Default to Mountain View
+    val mountainView = LatLng(37.4221, -122.0841)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(37.7749, -122.4194), 12f) // Default San Francisco
+        position = CameraPosition.fromLatLngZoom(mountainView, 15f)
     }
 
     var hasLocationPermission by remember {
@@ -60,14 +90,7 @@ fun MapScreen(
     )
 
     LaunchedEffect(hasLocationPermission) {
-        if (hasLocationPermission) {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                .addOnSuccessListener { location ->
-                    location?.let {
-                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(it.latitude, it.longitude), 15f)
-                    }
-                }
-        } else {
+        if (!hasLocationPermission) {
             launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
@@ -80,15 +103,21 @@ fun MapScreen(
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
             uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
         ) {
-            // Real Markers
-            Marker(state = MarkerState(position = LatLng(37.78, -122.42)), title = "Burger Palace")
-            Marker(state = MarkerState(position = LatLng(37.77, -122.41)), title = "Lucky Sushi")
+            // Filtered Markers
+            filteredRestaurants.forEach { restaurant ->
+                Marker(
+                    state = MarkerState(position = restaurant.location),
+                    title = restaurant.name,
+                    snippet = "${restaurant.rating} stars"
+                )
+            }
         }
 
-        // --- UI Overlays (Search, Chips, Side Buttons, Bottom Nav remain the same) ---
+        // --- UI Overlays ---
         Column(
             modifier = Modifier.fillMaxWidth().padding(top = 48.dp)
         ) {
+            // Search Bar
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -119,10 +148,26 @@ fun MapScreen(
                 }
             }
 
-            LazyRow(modifier = Modifier.padding(top = 16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { CategoryChip("All", Icons.Default.Restaurant, true) }
-                item { CategoryChip("Burgers", Icons.Default.LunchDining, false) }
-                item { CategoryChip("Pizza", Icons.Default.LocalPizza, false) }
+            // Category Chips
+            LazyRow(
+                modifier = Modifier.padding(top = 16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(categories) { category ->
+                    CategoryChip(
+                        text = category,
+                        icon = when(category) {
+                            "Burgers" -> Icons.Default.LunchDining
+                            "Pizza" -> Icons.Default.LocalPizza
+                            "Sushi" -> Icons.Default.Restaurant
+                            "Italian" -> Icons.Default.Restaurant
+                            else -> Icons.Default.Restaurant
+                        },
+                        selected = selectedCategory == category,
+                        onSelected = { selectedCategory = category }
+                    )
+                }
             }
         }
 
@@ -137,10 +182,12 @@ fun MapScreen(
             })
         }
 
+        // Bottom Cards showing filtered results
         Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { RestaurantMapCard("Burger Palace", "4.8", "0.5 miles away", "TOP RATED") }
-                item { RestaurantMapCard("Lucky Sushi", "4.7", "1.2 miles away", "FEATURED") }
+                items(filteredRestaurants) { restaurant ->
+                    RestaurantMapCard(restaurant.name, restaurant.rating, restaurant.distance, restaurant.tag)
+                }
             }
         }
 
@@ -158,8 +205,13 @@ fun MapScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean) {
-    Surface(shape = RoundedCornerShape(24.dp), color = if (selected) FoodGramOrange else Color.White, shadowElevation = 2.dp, onClick = {}) {
+fun CategoryChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, selected: Boolean, onSelected: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = if (selected) FoodGramOrange else Color.White,
+        shadowElevation = 2.dp,
+        onClick = onSelected
+    ) {
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = if (selected) Color.White else Color.Gray, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
