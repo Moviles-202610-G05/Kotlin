@@ -25,3 +25,15 @@ object Login
 
 @Serializable
 object SignUp
+@Serializable
+object Register
+
+
+@Serializable
+object RestaurantRegister
+
+@Serializable
+object MainFeed
+
+@Serializable
+object PersonalInfo
