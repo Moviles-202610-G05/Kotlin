@@ -36,21 +36,41 @@ import com.google.maps.android.compose.*
 data class MapRestaurant(
     val name: String,
     val rating: String,
-    val distance: String,
     val tag: String,
     val category: String,
     val location: LatLng
 )
 
 val mapRestaurants = listOf(
-    MapRestaurant("Burger Palace", "4.8", "0.2 miles", "TOP RATED", "Burgers", LatLng(37.423, -122.085)),
-    MapRestaurant("Sushi Zen", "4.7", "0.5 miles", "FEATURED", "Sushi", LatLng(37.421, -122.084)),
-    MapRestaurant("Pizza Hub", "4.5", "0.8 miles", "POPULAR", "Pizza", LatLng(37.425, -122.088)),
-    MapRestaurant("Burger Joint", "4.2", "1.1 miles", "CHEAP", "Burgers", LatLng(37.419, -122.091)),
-    MapRestaurant("Italian Delight", "4.9", "0.3 miles", "NEW", "Italian", LatLng(37.422, -122.082))
+    MapRestaurant("Burger Palace", "4.8", "TOP RATED", "Burgers", LatLng(37.423, -122.085)),
+    MapRestaurant("Sushi Zen", "4.7", "FEATURED", "Sushi", LatLng(37.421, -122.084)),
+    MapRestaurant("Pizza Hub", "4.5", "POPULAR", "Pizza", LatLng(37.425, -122.088)),
+    MapRestaurant("Burger Joint", "4.2", "CHEAP", "Burgers", LatLng(37.419, -122.091)),
+    MapRestaurant("Italian Delight", "4.9", "NEW", "Italian", LatLng(37.422, -122.082))
 )
 
 val categories = listOf("All", "Burgers", "Pizza", "Sushi", "Italian")
+
+/**
+ * Calculates distance in meters between two LatLng points.
+ */
+fun calculateDistanceMeters(start: LatLng, end: LatLng): Float {
+    val results = FloatArray(1)
+    Location.distanceBetween(
+        start.latitude, start.longitude,
+        end.latitude, end.longitude,
+        results
+    )
+    return results[0]
+}
+
+/**
+ * Formats distance from meters to a human-readable miles string.
+ */
+fun formatDistance(meters: Float): String {
+    val miles = meters * 0.000621371f
+    return "%.1f miles away".format(miles)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,17 +83,25 @@ fun MapScreen(
     val context = LocalContext.current
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     
-    // State for filtering
-    var selectedCategory by remember { mutableStateOf("All") }
+    // Default location (Mountain View)
+    val mountainView = LatLng(37.4221, -122.0841)
     
-    // Filtered restaurants
-    val filteredRestaurants = remember(selectedCategory) {
-        if (selectedCategory == "All") mapRestaurants
-        else mapRestaurants.filter { it.category == selectedCategory }
+    // States for filtering and sorting
+    var selectedCategory by remember { mutableStateOf("All") }
+    var userLocation by remember { mutableStateOf(mountainView) }
+    
+    // Processed list (Filtered by category, then Sorted by proximity)
+    val sortedRestaurants = remember(selectedCategory, userLocation) {
+        val filtered = if (selectedCategory == "All") {
+            mapRestaurants
+        } else {
+            mapRestaurants.filter { it.category == selectedCategory }
+        }
+        
+        filtered.sortedBy { calculateDistanceMeters(userLocation, it.location) }
     }
 
-    // Camera State - Default to Mountain View
-    val mountainView = LatLng(37.4221, -122.0841)
+    // Camera State
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(mountainView, 15f)
     }
@@ -89,8 +117,24 @@ fun MapScreen(
         onResult = { isGranted -> hasLocationPermission = isGranted }
     )
 
+    // Helper to update location
+    val updateLocation = {
+        if (hasLocationPermission) {
+            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { location ->
+                    location?.let {
+                        val newLatLng = LatLng(it.latitude, it.longitude)
+                        userLocation = newLatLng
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(newLatLng, 15f)
+                    }
+                }
+        }
+    }
+
     LaunchedEffect(hasLocationPermission) {
-        if (!hasLocationPermission) {
+        if (hasLocationPermission) {
+            updateLocation()
+        } else {
             launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
@@ -103,8 +147,8 @@ fun MapScreen(
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
             uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
         ) {
-            // Filtered Markers
-            filteredRestaurants.forEach { restaurant ->
+            // Markers for sorted/filtered restaurants
+            sortedRestaurants.forEach { restaurant ->
                 Marker(
                     state = MarkerState(position = restaurant.location),
                     title = restaurant.name,
@@ -171,26 +215,34 @@ fun MapScreen(
             }
         }
 
+        // Floating Action Buttons
         Column(modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MapSideButton(Icons.Default.Layers)
             MapSideButton(Icons.Default.MyLocation, onClick = {
                 if (hasLocationPermission) {
-                    fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
-                        location?.let { cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(it.latitude, it.longitude), 15f) }
-                    }
-                } else { launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION) }
+                    updateLocation()
+                } else {
+                    launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
             })
         }
 
-        // Bottom Cards showing filtered results
+        // Bottom Cards Carousel (Sorted by proximity)
         Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp)) {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(filteredRestaurants) { restaurant ->
-                    RestaurantMapCard(restaurant.name, restaurant.rating, restaurant.distance, restaurant.tag)
+                items(sortedRestaurants) { restaurant ->
+                    val distanceMeters = calculateDistanceMeters(userLocation, restaurant.location)
+                    RestaurantMapCard(
+                        name = restaurant.name,
+                        rating = restaurant.rating,
+                        distance = formatDistance(distanceMeters),
+                        tag = restaurant.tag
+                    )
                 }
             }
         }
 
+        // Bottom Navigation
         Surface(modifier = Modifier.align(Alignment.BottomCenter), shadowElevation = 8.dp) {
             NavigationBar(containerColor = Color.White) {
                 NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, label = { Text("FEED") })
