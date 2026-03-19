@@ -14,6 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import com.example.foodgram.navigation.*
 import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.feed.HomeScreen
+import com.example.foodgram.views.restaurants.MapScreen
+import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
 import com.example.foodgram.views.auth.LoginScreen
 import com.example.foodgram.views.auth.RegistrationTypeView
 import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
@@ -35,7 +37,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = Login,
+                        startDestination = Home,
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable<Login> {
