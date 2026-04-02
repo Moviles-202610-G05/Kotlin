@@ -33,6 +33,9 @@ object Register
 object RestaurantRegister
 
 @Serializable
+object MenuRegister
+
+@Serializable
 object MainFeed
 
 @Serializable

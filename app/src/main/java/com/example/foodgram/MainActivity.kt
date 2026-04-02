@@ -23,6 +23,7 @@ import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
 import com.example.foodgram.views.profile.UserScreen
 import com.example.foodgram.views.settings.PersonalInfoSettings
+import com.example.foodgram.views.auth.MenuRegisterView
 
 
 class MainActivity : ComponentActivity() {
@@ -59,7 +60,21 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable<RestaurantRegister> {
-                                RestaurantRegisterView(onBackClick = { navController.navigateUp() })
+                                RestaurantRegisterView(
+                                    onBackClick = { navController.navigateUp() },
+                                    onAddMenuClick = { navController.navigate(MenuRegister) }
+                                )
+                            }
+                            
+                            composable<MenuRegister> {
+                                MenuRegisterView(
+                                    onBackClick = { navController.navigateUp() },
+                                    onFinishClick = { 
+                                        navController.navigate(Home) {
+                                            popUpTo(Login) { inclusive = true }
+                                        }
+                                    }
+                                )
                             }
 
                             composable<Home> {

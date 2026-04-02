@@ -16,12 +16,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foodgram.ui.theme.OrangeFoodGram
+import com.example.foodgram.viewmodels.auth.LoginViewModel
 
 @Composable
-fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+fun LoginScreen(
+    onNavigateToHome: () -> Unit,
+    onNavigateToSignUp: () -> Unit,
+    viewModel: LoginViewModel = viewModel()
+) {
+    val email = viewModel.email
+    val password = viewModel.password
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
 
     Column(
         modifier = Modifier
@@ -52,10 +60,19 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Error Message
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
         // Input Fields
         CustomTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { viewModel.onEmailChange(it) },
             label = "Email Address",
             placeholder = "Enter your email",
             leadingIcon = Icons.Default.Email
@@ -65,7 +82,7 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         CustomTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { viewModel.onPasswordChange(it) },
             label = "Password",
             placeholder = "Enter your password",
             leadingIcon = Icons.Default.Lock,
@@ -84,14 +101,21 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         // Login Button
         Button(
-            onClick = onNavigateToHome,
+            onClick = {
+                viewModel.login(onSuccess = onNavigateToHome)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = OrangeFoodGram),
-            shape = RoundedCornerShape(28.dp)
+            shape = RoundedCornerShape(28.dp),
+            enabled = !isLoading
         ) {
-            Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))

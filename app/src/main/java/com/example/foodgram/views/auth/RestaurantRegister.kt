@@ -38,7 +38,10 @@ data class RestaurantFormState(
 )
 
 @Composable
-fun RestaurantRegisterView(onBackClick: () -> Unit = {}) {
+fun RestaurantRegisterView(
+    onBackClick: () -> Unit = {},
+    onAddMenuClick: () -> Unit = {}
+) {
     var formState by remember { mutableStateOf(RestaurantFormState()) }
 
     Column(
@@ -146,7 +149,7 @@ fun RestaurantRegisterView(onBackClick: () -> Unit = {}) {
         // --- Footer & Button ---
         Spacer(modifier = Modifier.height(24.dp))
         Button(
-            onClick = { /* Action */ },
+            onClick = onAddMenuClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
