@@ -1,12 +1,15 @@
 package com.example.foodgram.views
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +38,7 @@ data class RestaurantFormState(
 )
 
 @Composable
-fun RestaurantRegisterView() {
+fun RestaurantRegisterView(onBackClick: () -> Unit = {}) {
     var formState by remember { mutableStateOf(RestaurantFormState()) }
 
     Column(
@@ -50,8 +53,8 @@ fun RestaurantRegisterView() {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { /* Handle back */ }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color(0xFFFF5722))
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color(0xFFFF5722))
             }
             Text(
                 "Partner with Us",
@@ -73,8 +76,11 @@ fun RestaurantRegisterView() {
         }
 
         LinearProgressIndicator(
-            progress = 0.5f,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(8.dp)),
+            progress = { 0.5f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .clip(RoundedCornerShape(8.dp)),
             color = Color(0xFFFF5722),
             trackColor = Color(0xFFFFE0D4)
         )
@@ -89,12 +95,38 @@ fun RestaurantRegisterView() {
         )
 
         SectionHeader("RESTAURANT DETAILS")
-        CustomInputField(value = formState.restaurantName, onValueChange = { /* update */ }, label = "Restaurant Name", icon = Icons.Default.Storefront)
-        CustomInputField(value = formState.email, onValueChange = { /* update */ }, label = "Business Email", icon = Icons.Default.Email)
-        CustomInputField(value = formState.phone, onValueChange = { /* update */ }, label = "Phone Number", icon = Icons.Default.Phone)
-        CustomInputField(value = formState.address, onValueChange = { /* update */ }, label = "Address", icon = Icons.Default.LocationOn)
-        CustomInputField(value = formState.username, onValueChange = { /* update */ }, label = "Username", icon = Icons.Default.AlternateEmail)
-        CuisineDropdown(
+        CustomInputField(
+            value = formState.restaurantName,
+            onValueChange = { formState = formState.copy(restaurantName = it) },
+            label = "Restaurant Name",
+            icon = Icons.Default.Storefront
+        )
+        CustomInputField(
+            value = formState.email,
+            onValueChange = { formState = formState.copy(email = it) },
+            label = "Business Email",
+            icon = Icons.Default.Email
+        )
+        CustomInputField(
+            value = formState.phone,
+            onValueChange = { formState = formState.copy(phone = it) },
+            label = "Phone Number",
+            icon = Icons.Default.Phone
+        )
+        CustomInputField(
+            value = formState.address,
+            onValueChange = { formState = formState.copy(address = it) },
+            label = "Address",
+            icon = Icons.Default.LocationOn
+        )
+        CustomInputField(
+            value = formState.username,
+            onValueChange = { formState = formState.copy(username = it) },
+            label = "Username",
+            icon = Icons.Default.AlternateEmail
+        )
+        
+        SimpleCuisineDropdown(
             selectedCuisine = formState.cuisineType,
             onCuisineSelected = { newCuisine ->
                 formState = formState.copy(cuisineType = newCuisine)
@@ -104,7 +136,9 @@ fun RestaurantRegisterView() {
         // --- Photo Uploader ---
         Text(
             "Restaurant Photo",
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
             fontWeight = FontWeight.Bold
         )
         PhotoUploadBox()
@@ -113,12 +147,14 @@ fun RestaurantRegisterView() {
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = { /* Action */ },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
             shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7043))
         ) {
             Text("Add menu", color = Color.White)
-            Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.padding(start = 8.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.padding(start = 8.dp))
         }
     }
 }
@@ -127,7 +163,9 @@ fun RestaurantRegisterView() {
 fun SectionHeader(text: String) {
     Text(
         text = text,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
         color = Color(0xFFFF7043),
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold
@@ -155,10 +193,10 @@ fun CustomInputField(
                 tint = Color.Gray.copy(alpha = 0.6f)
             )
         },
-        shape = RoundedCornerShape(28.dp), // This gives the pill-shape from the image
+        shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
             unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
-            focusedBorderColor = Color(0xFFFF7043) // Primary orange color
+            focusedBorderColor = Color(0xFFFF7043)
         ),
         singleLine = true
     )
@@ -171,12 +209,11 @@ fun PhotoUploadBox() {
             .fillMaxWidth()
             .height(200.dp)
             .background(
-                color = OrangeFoodGram.copy(alpha = 0.1f), // 10% opacity for a soft tint
-                shape = RoundedCornerShape(24.dp) // Matches your border radius
+                color = OrangeFoodGram.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(24.dp)
             )
             .padding(vertical = 12.dp)
             .drawBehind {
-                // Draws the dashed rounded rectangle
                 val stroke = Stroke(
                     width = 2f,
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
@@ -190,7 +227,6 @@ fun PhotoUploadBox() {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Main upload icon
             Icon(
                 imageVector = Icons.Default.AddAPhoto,
                 contentDescription = null,
@@ -205,7 +241,6 @@ fun PhotoUploadBox() {
             )
         }
 
-        // Small orange edit floating button shown in the corner of the box
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -217,21 +252,17 @@ fun PhotoUploadBox() {
             Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         }
     }
+}
 
-
-}@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CuisineDropdown(
+fun SimpleCuisineDropdown(
     selectedCuisine: String,
     onCuisineSelected: (String) -> Unit
 ) {
     val cuisines = listOf("Italian", "Chinese", "Mexican", "Indian", "Continental", "Fast Food")
     var expanded by remember { mutableStateOf(false) }
 
-    // This box handles the logic of showing/hiding the menu
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
@@ -239,13 +270,20 @@ fun CuisineDropdown(
         OutlinedTextField(
             value = selectedCuisine,
             onValueChange = {},
-            readOnly = true, // Prevents typing; forces selection from list
+            readOnly = true,
             label = { Text("Cuisine Type") },
             leadingIcon = { Icon(Icons.Default.Restaurant, contentDescription = null, tint = Color.Gray.copy(alpha = 0.6f)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            trailingIcon = { 
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, 
+                        contentDescription = null
+                    )
+                }
+            },
             modifier = Modifier
-                .menuAnchor() // Critical: anchors the menu to the text field
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
             shape = RoundedCornerShape(28.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color.LightGray.copy(alpha = 0.3f),
@@ -253,9 +291,10 @@ fun CuisineDropdown(
             )
         )
 
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f)
         ) {
             cuisines.forEach { cuisine ->
                 DropdownMenuItem(

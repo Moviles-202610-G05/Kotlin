@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             composable<RestaurantRegister> {
-                                RestaurantRegisterView()
+                                RestaurantRegisterView(onBackClick = { navController.navigateUp() })
                             }
 
                             composable<Home> {
