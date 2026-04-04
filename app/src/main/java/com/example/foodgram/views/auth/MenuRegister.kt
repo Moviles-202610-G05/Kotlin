@@ -1,5 +1,14 @@
 package com.example.foodgram.views.auth
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,22 +29,32 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
+import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
 import com.example.foodgram.views.SectionHeader
+import java.io.File
+import java.io.FileOutputStream
 
 data class MenuItem(
     val name: String,
     val price: String,
     val category: String,
     val description: String,
+    val imageUri: Uri? = null,
     val inStock: Boolean = true
 )
 
 @Composable
 fun MenuRegisterView(
+    viewModel: RestaurantRegisterViewModel = viewModel(),
     onBackClick: () -> Unit = {},
     onFinishClick: () -> Unit = {}
 ) {
@@ -44,8 +63,9 @@ fun MenuRegisterView(
     var category by remember { mutableStateOf("Main Course") }
     var description by remember { mutableStateOf("") }
     var inStock by remember { mutableStateOf(true) }
+    var dishImageUri by remember { mutableStateOf<Uri?>(null) }
     
-    val menuItems = remember { mutableStateListOf<MenuItem>() }
+    val menuItems = viewModel.menuItems
 
     Column(
         modifier = Modifier
@@ -94,6 +114,15 @@ fun MenuRegisterView(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Error Message
+        viewModel.errorMessage?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
         // --- Dish Photo ---
         Text(
             "Dish Photo",
@@ -102,7 +131,10 @@ fun MenuRegisterView(
             fontSize = 14.sp
         )
         Spacer(modifier = Modifier.height(8.dp))
-        DishPhotoUploadBox()
+        DishPhotoUploadBox(
+            imageUri = dishImageUri,
+            onImageSelected = { dishImageUri = it }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -188,10 +220,11 @@ fun MenuRegisterView(
         Button(
             onClick = {
                 if (dishName.isNotBlank() && price.isNotBlank()) {
-                    menuItems.add(MenuItem(dishName, price, category, description, inStock))
+                    menuItems.add(MenuItem(dishName, price, category, description, dishImageUri, inStock))
                     dishName = ""
                     price = ""
                     description = ""
+                    dishImageUri = null
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -226,35 +259,117 @@ fun MenuRegisterView(
             onClick = onFinishClick,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7043))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7043)),
+            enabled = !viewModel.isLoading
         ) {
-            Text("Finish Registration", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(Icons.Default.RocketLaunch, contentDescription = null)
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Finish Registration", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Default.RocketLaunch, contentDescription = null)
+            }
         }
     }
 }
 
 @Composable
-fun DishPhotoUploadBox() {
+fun DishPhotoUploadBox(
+    imageUri: Uri?,
+    onImageSelected: (Uri?) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    
+    // Gallery Launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        onImageSelected(uri)
+    }
+
+    // Camera Launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            val file = File(context.cacheDir, "dish_photo_${System.currentTimeMillis()}.jpg")
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+            }
+            onImageSelected(Uri.fromFile(file))
+        }
+    }
+
+    // Permission Launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch()
+        } else {
+            Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Upload Dish Photo") },
+            text = { Text("Choose a source for your photo") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    galleryLauncher.launch("image/*")
+                    showDialog = false 
+                }) {
+                    Text("Gallery")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    val permissionCheckResult = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                        cameraLauncher.launch()
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                    showDialog = false 
+                }) {
+                    Text("Camera")
+                }
+            }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp)
             .background(Color(0xFFFF7043).copy(alpha = 0.05f), RoundedCornerShape(24.dp))
+            .clickable { showDialog = true }
             .drawBehind {
                 val stroke = Stroke(width = 2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f))
                 drawRoundRect(color = Color(0xFFFF7043).copy(alpha = 0.3f), style = stroke, cornerRadius = CornerRadius(24.dp.toPx()))
             },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color(0xFFFF7043), modifier = Modifier.size(40.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Upload Photo", color = Color(0xFFFF7043), fontWeight = FontWeight.Medium)
+        if (imageUri != null) {
+            Image(
+                painter = rememberAsyncImagePainter(imageUri),
+                contentDescription = "Selected Dish Image",
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color(0xFFFF7043), modifier = Modifier.size(40.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Upload Photo", color = Color(0xFFFF7043), fontWeight = FontWeight.Medium)
+            }
         }
         Box(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).size(36.dp).background(Color(0xFFFF7043), CircleShape),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).size(36.dp).background(Color(0xFFFF7043), CircleShape)
+                .clickable { showDialog = true },
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -303,15 +418,23 @@ fun MenuListItem(item: MenuItem) {
             Box(
                 modifier = Modifier.size(60.dp).clip(CircleShape).background(Color.LightGray)
             ) {
-                // Placeholder for dish image
-                Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.align(Alignment.Center), tint = Color.White)
+                if (item.imageUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(item.imageUri),
+                        contentDescription = item.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.align(Alignment.Center), tint = Color.White)
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("$\u0024{item.price} • \u0024{item.category}", color = Color.Gray, fontSize = 12.sp)
+                Text("\u0024{item.price} • \u0024{item.category}", color = Color.Gray, fontSize = 12.sp)
             }
-            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFFC5CAE9))
+            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = if (item.inStock) Color(0xFF4CAF50) else Color(0xFFC5CAE9))
         }
     }
 }

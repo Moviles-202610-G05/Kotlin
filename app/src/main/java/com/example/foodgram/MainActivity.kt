@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -25,6 +26,7 @@ import com.example.foodgram.views.profile.UserScreen
 import com.example.foodgram.views.settings.PersonalInfoSettings
 import com.example.foodgram.views.auth.MenuRegisterView
 import com.example.foodgram.views.auth.StudentRegisterScreen
+import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -34,6 +36,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             FoodGramTheme {
                 val navController = rememberNavController()
+                val restaurantViewModel: RestaurantRegisterViewModel = viewModel()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
@@ -75,6 +78,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable<RestaurantRegister> {
                             RestaurantRegisterView(
+                                viewModel = restaurantViewModel,
                                 onBackClick = { navController.navigateUp() },
                                 onAddMenuClick = { navController.navigate(MenuRegister) }
                             )
@@ -82,10 +86,13 @@ class MainActivity : ComponentActivity() {
                         
                         composable<MenuRegister> {
                             MenuRegisterView(
+                                viewModel = restaurantViewModel,
                                 onBackClick = { navController.navigateUp() },
                                 onFinishClick = { 
-                                    navController.navigate(Home) {
-                                        popUpTo(Login) { inclusive = true }
+                                    restaurantViewModel.finishRegistration {
+                                        navController.navigate(Home) {
+                                            popUpTo(Login) { inclusive = true }
+                                        }
                                     }
                                 }
                             )
