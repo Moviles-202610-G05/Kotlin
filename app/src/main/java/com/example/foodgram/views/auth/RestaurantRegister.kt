@@ -1,5 +1,14 @@
 package com.example.foodgram.views
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,25 +31,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.foodgram.ui.theme.OrangeFoodGram
-
-data class RestaurantFormState(
-    val ownerName: String = "",
-    val restaurantName: String = "",
-    val email: String = "",
-    val phone: String = "",
-    val address: String = "",
-    val username: String = "",
-    val cuisineType: String = ""
-)
+import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
-fun RestaurantRegisterView(onBackClick: () -> Unit = {}) {
-    var formState by remember { mutableStateOf(RestaurantFormState()) }
-
+fun RestaurantRegisterView(
+    viewModel: RestaurantRegisterViewModel = viewModel(),
+    onBackClick: () -> Unit = {},
+    onAddMenuClick: () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -88,49 +99,54 @@ fun RestaurantRegisterView(onBackClick: () -> Unit = {}) {
         // --- Form Sections ---
         SectionHeader("OWNER DETAILS")
         CustomInputField(
-            value = formState.ownerName,
-            onValueChange = { formState = formState.copy(ownerName = it) },
+            value = viewModel.ownerName,
+            onValueChange = { viewModel.ownerName = it },
             label = "Full Name of the owner",
             icon = Icons.Default.Person
         )
 
         SectionHeader("RESTAURANT DETAILS")
         CustomInputField(
-            value = formState.restaurantName,
-            onValueChange = { formState = formState.copy(restaurantName = it) },
+            value = viewModel.restaurantName,
+            onValueChange = { viewModel.restaurantName = it },
             label = "Restaurant Name",
             icon = Icons.Default.Storefront
         )
         CustomInputField(
-            value = formState.email,
-            onValueChange = { formState = formState.copy(email = it) },
+            value = viewModel.email,
+            onValueChange = { viewModel.email = it },
             label = "Business Email",
             icon = Icons.Default.Email
         )
         CustomInputField(
-            value = formState.phone,
-            onValueChange = { formState = formState.copy(phone = it) },
+            value = viewModel.phone,
+            onValueChange = { viewModel.phone = it },
             label = "Phone Number",
             icon = Icons.Default.Phone
         )
         CustomInputField(
-            value = formState.address,
-            onValueChange = { formState = formState.copy(address = it) },
+            value = viewModel.address,
+            onValueChange = { viewModel.address = it },
             label = "Address",
             icon = Icons.Default.LocationOn
         )
         CustomInputField(
-            value = formState.username,
-            onValueChange = { formState = formState.copy(username = it) },
+            value = viewModel.username,
+            onValueChange = { viewModel.username = it },
             label = "Username",
             icon = Icons.Default.AlternateEmail
         )
+        CustomInputField(
+            value = viewModel.password,
+            onValueChange = { viewModel.password = it },
+            label = "Password",
+            icon = Icons.Default.Lock,
+            isPassword = true
+        )
         
         SimpleCuisineDropdown(
-            selectedCuisine = formState.cuisineType,
-            onCuisineSelected = { newCuisine ->
-                formState = formState.copy(cuisineType = newCuisine)
-            }
+            selectedCuisine = viewModel.cuisineType,
+            onCuisineSelected = { viewModel.cuisineType = it }
         )
 
         // --- Photo Uploader ---
@@ -141,12 +157,16 @@ fun RestaurantRegisterView(onBackClick: () -> Unit = {}) {
                 .padding(top = 16.dp),
             fontWeight = FontWeight.Bold
         )
-        PhotoUploadBox()
+        
+        PhotoUploadBox(
+            imageUri = viewModel.restaurantImageUri,
+            onImageSelected = { viewModel.restaurantImageUri = it }
+        )
 
         // --- Footer & Button ---
         Spacer(modifier = Modifier.height(24.dp))
         Button(
-            onClick = { /* Action */ },
+            onClick = onAddMenuClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -177,7 +197,8 @@ fun CustomInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    isPassword: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
@@ -193,6 +214,16 @@ fun CustomInputField(
                 tint = Color.Gray.copy(alpha = 0.6f)
             )
         },
+        trailingIcon = {
+            if (isPassword) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = null,
+                    tint = Color.Gray.copy(alpha = 0.6f)
+                )
+            }
+        },
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
             unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
@@ -203,7 +234,73 @@ fun CustomInputField(
 }
 
 @Composable
-fun PhotoUploadBox() {
+fun PhotoUploadBox(
+    imageUri: Uri?,
+    onImageSelected: (Uri?) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    
+    // Gallery Launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        onImageSelected(uri)
+    }
+
+    // Camera Launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            val file = File(context.cacheDir, "restaurant_photo_${System.currentTimeMillis()}.jpg")
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+            }
+            onImageSelected(Uri.fromFile(file))
+        }
+    }
+
+    // Permission Launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch()
+        } else {
+            Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Upload Restaurant Photo") },
+            text = { Text("Choose a source for your photo") },
+            confirmButton = {
+                TextButton(onClick = { 
+                    galleryLauncher.launch("image/*")
+                    showDialog = false 
+                }) {
+                    Text("Gallery")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    val permissionCheckResult = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                    if (permissionCheckResult == PackageManager.PERMISSION_GRANTED) {
+                        cameraLauncher.launch()
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                    showDialog = false 
+                }) {
+                    Text("Camera")
+                }
+            }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -212,6 +309,7 @@ fun PhotoUploadBox() {
                 color = OrangeFoodGram.copy(alpha = 0.1f),
                 shape = RoundedCornerShape(24.dp)
             )
+            .clickable { showDialog = true }
             .padding(vertical = 12.dp)
             .drawBehind {
                 val stroke = Stroke(
@@ -226,19 +324,28 @@ fun PhotoUploadBox() {
             },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.AddAPhoto,
-                contentDescription = null,
-                tint = Color(0xFFFF7043),
-                modifier = Modifier.size(48.dp)
+        if (imageUri != null) {
+            Image(
+                painter = rememberAsyncImagePainter(imageUri),
+                contentDescription = "Selected Image",
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)),
+                contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Upload Photo",
-                color = Color(0xFFFF7043),
-                fontWeight = FontWeight.SemiBold
-            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.AddAPhoto,
+                    contentDescription = null,
+                    tint = Color(0xFFFF7043),
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Upload Photo",
+                    color = Color(0xFFFF7043),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Box(
@@ -246,7 +353,8 @@ fun PhotoUploadBox() {
                 .align(Alignment.BottomEnd)
                 .padding(12.dp)
                 .size(40.dp)
-                .background(Color(0xFFFF7043), CircleShape),
+                .background(Color(0xFFFF7043), CircleShape)
+                .clickable { showDialog = true },
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
