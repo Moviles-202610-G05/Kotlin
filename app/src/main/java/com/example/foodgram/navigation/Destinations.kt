@@ -43,3 +43,6 @@ object MainFeed
 
 @Serializable
 object PersonalInfo
+
+@Serializable
+object ForgotPassword

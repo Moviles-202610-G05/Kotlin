@@ -36,7 +36,7 @@ fun ForgotPasswordScreen(
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // --- Header ---
+        // --- Texto ubicacion ---
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             IconButton(
                 onClick = onBackClick,
@@ -49,7 +49,7 @@ fun ForgotPasswordScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Step Header ---
+        // --- Header estado ---
         Column(modifier = Modifier.fillMaxWidth()) {
             val (title, subtitle) = when (viewModel.step) {
                 1 -> "Forgot Password?" to "Enter your email to receive a recovery code."
@@ -71,7 +71,8 @@ fun ForgotPasswordScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Error Message ---
+        // --- Mensaje de error si existe
+        // ---
         viewModel.errorMessage?.let {
             Text(
                 text = it,
@@ -80,7 +81,7 @@ fun ForgotPasswordScreen(
             )
         }
 
-        // --- Input Section ---
+        // --- Inputs ---
         when (viewModel.step) {
             1 -> {
                 CustomTextField(
@@ -114,7 +115,7 @@ fun ForgotPasswordScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Action Button ---
+        // --- Botones ---
         Button(
             onClick = {
                 when (viewModel.step) {

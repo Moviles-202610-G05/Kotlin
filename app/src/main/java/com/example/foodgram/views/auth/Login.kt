@@ -24,6 +24,7 @@ import com.example.foodgram.viewmodels.auth.LoginViewModel
 fun LoginScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToSignUp: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     val email = viewModel.email
@@ -91,7 +92,7 @@ fun LoginScreen(
 
         // Forgot Password
         TextButton(
-            onClick = { /* TODO */ },
+            onClick = { onNavigateToForgotPassword() },
             modifier = Modifier.align(Alignment.End)
         ) {
             Text("Forgot Password?", color = OrangeFoodGram)
