@@ -27,6 +27,7 @@ import com.example.foodgram.views.settings.PersonalInfoSettings
 import com.example.foodgram.views.auth.MenuRegisterView
 import com.example.foodgram.views.auth.StudentRegisterScreen
 import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
+import com.example.foodgram.views.auth.ForgotPasswordScreen
 import com.example.foodgram.views.settings.NutritionGoalsScreen
 
 
@@ -48,7 +49,19 @@ class MainActivity : ComponentActivity() {
                         composable<Login> {
                             LoginScreen(
                                 onNavigateToHome = { navController.navigate(Home) },
-                                onNavigateToSignUp = { navController.navigate(Register) })
+                                onNavigateToSignUp = { navController.navigate(Register) },
+                                onNavigateToForgotPassword = { navController.navigate(ForgotPassword) }
+                            )
+                        }
+                        composable<ForgotPassword> {
+                            ForgotPasswordScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onResetSuccess = { 
+                                    navController.navigate(Login) {
+                                        popUpTo(ForgotPassword) { inclusive = true }
+                                    }
+                                }
+                            )
                         }
                         composable<Register> {
                             RegistrationTypeView(
