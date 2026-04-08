@@ -27,6 +27,7 @@ import com.example.foodgram.views.settings.PersonalInfoSettings
 import com.example.foodgram.views.auth.MenuRegisterView
 import com.example.foodgram.views.auth.StudentRegisterScreen
 import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
+import com.example.foodgram.views.settings.NutritionGoalsScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -126,7 +127,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToOrders = { /* TODO */ },
                                 onNavigateToReviews = { /* TODO */ },
                                 onNavigateToSaved = { /* TODO */ },
-                                onNavigateToNutritionGoals = { /* TODO */ },
+                                onNavigateToNutritionGoals = { navController.navigate(NutritionGoals) },
                                 onNavigateToPrivacySettings = { /* TODO */ },
                                 onLogout = {
                                     navController.navigate(Login) {
@@ -137,6 +138,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable<PersonalInfo> {
                                 PersonalInfoSettings(navController = navController)
+                        }
+                        composable<NutritionGoals> {
+                            NutritionGoalsScreen(navController = navController)
                         }
                         composable<Menu> { /* TODO */ }
                         composable<RestaurantsMap> {

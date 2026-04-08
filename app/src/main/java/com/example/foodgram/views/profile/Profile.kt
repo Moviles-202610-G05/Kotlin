@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.foodgram.navigation.NutritionGoals
 import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
 import com.google.firebase.auth.FirebaseAuth
@@ -61,10 +62,9 @@ fun UserScreen(
     var carbsGoal by remember { mutableStateOf(200f) }
     var fatGoal by remember { mutableStateOf(67f) }
 
-    var caloriesConsumed by remember { mutableStateOf(0f) }
-    var proteinConsumed by remember { mutableStateOf(0f) }
-    var carbsConsumed by remember { mutableStateOf(0f) }
-    var fatConsumed by remember { mutableStateOf(0f) }
+    var ordersCount by remember { mutableStateOf(0) }
+    var reviewsCount by remember { mutableStateOf(0) }
+    var savedCount by remember { mutableStateOf(0) }
 
     val userId = UserSession.currentUserDocId
 
@@ -86,6 +86,10 @@ fun UserScreen(
                         proteinGoal = snapshot.getDouble("proteinGoal")?.toFloat() ?: 150f
                         carbsGoal = snapshot.getDouble("carbsGoal")?.toFloat() ?: 200f
                         fatGoal = snapshot.getDouble("fatGoal")?.toFloat() ?: 67f
+                        ordersCount = snapshot.getLong("ordersCount")?.toInt() ?: 0
+                        reviewsCount = snapshot.getLong("reviewsCount")?.toInt() ?: 0
+                        savedCount = snapshot.getLong("savedCount")?.toInt() ?: 0
+
                     }
                 }
 
@@ -237,7 +241,7 @@ fun UserScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatCard(
-                        value = "0",
+                        value = ordersCount.toString(),
                         label = "ORDERS",
                         modifier = Modifier
                             .weight(1f)
@@ -245,7 +249,7 @@ fun UserScreen(
                     )
                     DividerStat()
                     StatCard(
-                        value = "0",
+                        value = reviewsCount.toString(),
                         label = "REVIEWS",
                         modifier = Modifier
                             .weight(1f)
@@ -253,7 +257,7 @@ fun UserScreen(
                     )
                     DividerStat()
                     StatCard(
-                        value = "0",
+                        value = savedCount.toString(),
                         label = "SAVED",
                         modifier = Modifier
                             .weight(1f)
@@ -273,13 +277,9 @@ fun UserScreen(
             Spacer(modifier = Modifier.height(12.dp))
             NutritionCard(
                 caloriesGoal = caloriesGoal,
-                caloriesConsumed = caloriesConsumed,
                 proteinGoal = proteinGoal,
-                proteinConsumed = proteinConsumed,
                 carbsGoal = carbsGoal,
-                carbsConsumed = carbsConsumed,
-                fatGoal = fatGoal,
-                fatConsumed = fatConsumed
+                fatGoal = fatGoal
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -311,6 +311,7 @@ fun UserScreen(
             OutlinedButton(
                 onClick = {
                     auth.signOut()
+                    UserSession.currentUserDocId = null
                     onLogout()
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -397,17 +398,10 @@ fun SectionHeader(title: String, action: String, onAction: (() -> Unit)? = null)
 @Composable
 fun NutritionCard(
     caloriesGoal: Float,
-    caloriesConsumed: Float,
     proteinGoal: Float,
-    proteinConsumed: Float,
     carbsGoal: Float,
-    carbsConsumed: Float,
-    fatGoal: Float,
-    fatConsumed: Float
+    fatGoal: Float
 ) {
-    val calProgress = (caloriesConsumed / caloriesGoal).coerceIn(0f, 1f)
-    val calPct = (calProgress * 100).toInt()
-
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = Color.White,
@@ -419,27 +413,20 @@ fun NutritionCard(
 
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = "${caloriesConsumed.toInt()}",
+                    text = "${caloriesGoal.toInt()}",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = " / ${caloriesGoal.toInt()} kcal",
+                    text = " kcal",
                     color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "$calPct%",
-                    color = OrangeFoodGram,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { calProgress },
+                progress = { 1f },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(10.dp)
@@ -458,21 +445,21 @@ fun NutritionCard(
             ) {
                 MacroItem(
                     label = "Protein",
-                    consumed = "${proteinConsumed.toInt()}g",
+                    consumed = "${proteinGoal.toInt()}g",
                     color = Color(0xFFFF5252),
-                    progress = (proteinConsumed / proteinGoal).coerceIn(0f, 1f)
+                    progress = 1f
                 )
                 MacroItem(
                     label = "Carbs",
-                    consumed = "${carbsConsumed.toInt()}g",
+                    consumed = "${carbsGoal.toInt()}g",
                     color = Color(0xFFFF9800),
-                    progress = (carbsConsumed / carbsGoal).coerceIn(0f, 1f)
+                    progress = 1f
                 )
                 MacroItem(
                     label = "Fat",
-                    consumed = "${fatConsumed.toInt()}g",
+                    consumed = "${fatGoal.toInt()}g",
                     color = Color(0xFFFFC107),
-                    progress = (fatConsumed / fatGoal).coerceIn(0f, 1f)
+                    progress = 1f
                 )
             }
         }

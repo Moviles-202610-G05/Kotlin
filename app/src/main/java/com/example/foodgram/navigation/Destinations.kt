@@ -42,4 +42,6 @@ object MenuRegister
 object MainFeed
 
 @Serializable
+object NutritionGoals
+@Serializable
 object PersonalInfo

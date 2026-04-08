@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.example.foodgram.utils.UserSession
 import com.google.firebase.firestore.FirebaseFirestore
 
 class StudentRegisterViewModel : ViewModel() {
@@ -47,20 +48,26 @@ class StudentRegisterViewModel : ViewModel() {
         isLoading = true
         errorMessage = null
 
-        val userData = hashMapOf(
-            "name" to name,
-            "username" to username,
-            "email" to email,
-            "password" to password, 
-            "universityId" to universityId,
-            "roll" to "ESTUDIANTE",
-            "preferences" to selectedPreferences.toList(),
-            "carrier" to ""
-        )
+                val userData = hashMapOf(
+                    "name" to name,
+                    "username" to username,
+                    "email" to email,
+                    "password" to password,
+                    "universityId" to universityId,
+                    "roll" to "ESTUDIANTE",
+                    "preferences" to selectedPreferences.toList(),
+                    "carrier" to "",
+                    "ordersCount" to 0,
+                    "reviewsCount" to 0,
+                    "savedCount" to 0
+                )
 
         db.collection("user")
             .add(userData)
             .addOnSuccessListener {
+                    documentReference ->
+                val docId = documentReference.id
+                UserSession.currentUserDocId = docId
                 isLoading = false
                 onSuccess()
             }
