@@ -175,7 +175,7 @@ fun UserScreen(
         ) {
             Spacer(modifier = Modifier.height(28.dp))
 
-            // --- FOTO DE PERFIL ---
+
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -195,7 +195,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // --- NOMBRE Y UBICACIÓN ---
+
             Text(
                 text = name,
                 fontSize = 24.sp,
@@ -222,7 +222,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // --- ESTADÍSTICAS ---
+
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
@@ -264,7 +264,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- NUTRITION GOALS ---
+
             SectionHeader(
                 title = "Nutrition Goals",
                 action = "Details",
@@ -284,7 +284,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- ACCOUNT SETTINGS ---
+
             SectionHeader(title = "Account Settings", action = "")
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -307,7 +307,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- LOGOUT ---
+
             OutlinedButton(
                 onClick = {
                     auth.signOut()

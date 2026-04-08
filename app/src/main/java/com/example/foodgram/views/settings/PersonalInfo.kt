@@ -47,7 +47,7 @@ fun PersonalInfoSettings(
     val db = FirebaseFirestore.getInstance()
 
 
-    // Estado local para los campos editables
+
     var name by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -88,7 +88,7 @@ fun PersonalInfoSettings(
             .set(updates, SetOptions.merge())
             .addOnSuccessListener {
                 isLoading = false
-                Toast.makeText(navController.context, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                Toast.makeText(navController.context, "Profile updated", Toast.LENGTH_SHORT).show()
                 navController.popBackStack()
             }
             .addOnFailureListener { e ->
@@ -176,7 +176,7 @@ fun PersonalInfoSettings(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- FOTO DE PERFIL ---
+
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
@@ -204,7 +204,7 @@ fun PersonalInfoSettings(
                         .size(30.dp)
                         .clip(CircleShape)
                         .background(OrangeFoodGram)
-                        .clickable { /* TODO: Logica para subir foto a Firebase Storage */ },
+                        .clickable { /* TODO: Handle edit photo */ },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -229,7 +229,7 @@ fun PersonalInfoSettings(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- CAMPOS EDITABLES  ---
+
             InfoField(
                 label = "OWNER NAME",
                 value = name,
