@@ -26,8 +26,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.foodgram.navigation.NutritionGoals
 import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.example.foodgram.utils.UserSession
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,32 +48,53 @@ fun UserScreen(
     onNavigateToPrivacySettings: () -> Unit,
     onLogout: () -> Unit
 ) {
-    // Datos de perfil (estado interno)
-    var name by remember { mutableStateOf("Alex Johnson") }
-    var username by remember { mutableStateOf("@alex_j") }
-    var email by remember { mutableStateOf("alex.j@email.com") }
-    var location by remember { mutableStateOf("London, UK") }
 
-    // Metas del usuario (opcional, si las tienes)
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+
+    var name by remember { mutableStateOf("Loading...") }
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
     var caloriesGoal by remember { mutableStateOf(2000f) }
     var proteinGoal by remember { mutableStateOf(150f) }
     var carbsGoal by remember { mutableStateOf(200f) }
     var fatGoal by remember { mutableStateOf(67f) }
 
-    var caloriesConsumed by remember { mutableStateOf(1200f) }
-    var proteinConsumed by remember { mutableStateOf(80f) }
-    var carbsConsumed by remember { mutableStateOf(140f) }
-    var fatConsumed by remember { mutableStateOf(35f) }
+    var ordersCount by remember { mutableStateOf(0) }
+    var reviewsCount by remember { mutableStateOf(0) }
+    var savedCount by remember { mutableStateOf(0) }
 
+    val userId = UserSession.currentUserDocId
 
-    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
-    LaunchedEffect(savedStateHandle) {
-        savedStateHandle?.getLiveData<Map<String, String>>("userInfo")?.observeForever { result ->
-            result?.let {
-                name = it["name"] ?: name
-                username = it["username"] ?: username
-                email = it["email"] ?: email
-                location = it["location"] ?: location
+    DisposableEffect(userId) {
+        if (userId == null) {
+            onDispose { }
+        } else {
+            val listener = db.collection("user").document(userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+
+                    if (snapshot.exists()) {
+                        name = snapshot.getString("name") ?: "User"
+                        username = snapshot.getString("username") ?: ""
+                        email = snapshot.getString("email") ?: ""
+                        location = snapshot.getString("location") ?: "Not defined"
+
+                        caloriesGoal = snapshot.getDouble("caloriesGoal")?.toFloat() ?: 2000f
+                        proteinGoal = snapshot.getDouble("proteinGoal")?.toFloat() ?: 150f
+                        carbsGoal = snapshot.getDouble("carbsGoal")?.toFloat() ?: 200f
+                        fatGoal = snapshot.getDouble("fatGoal")?.toFloat() ?: 67f
+                        ordersCount = snapshot.getLong("ordersCount")?.toInt() ?: 0
+                        reviewsCount = snapshot.getLong("reviewsCount")?.toInt() ?: 0
+                        savedCount = snapshot.getLong("savedCount")?.toInt() ?: 0
+
+                    }
+                }
+
+            onDispose {
+                listener.remove()
             }
         }
     }
@@ -154,7 +179,7 @@ fun UserScreen(
         ) {
             Spacer(modifier = Modifier.height(28.dp))
 
-            // --- FOTO DE PERFIL ---
+
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -174,7 +199,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // --- NOMBRE Y UBICACIÓN ---
+
             Text(
                 text = name,
                 fontSize = 24.sp,
@@ -201,7 +226,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // --- ESTADÍSTICAS ---
+
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
@@ -216,7 +241,7 @@ fun UserScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatCard(
-                        value = "42",
+                        value = ordersCount.toString(),
                         label = "ORDERS",
                         modifier = Modifier
                             .weight(1f)
@@ -224,7 +249,7 @@ fun UserScreen(
                     )
                     DividerStat()
                     StatCard(
-                        value = "15",
+                        value = reviewsCount.toString(),
                         label = "REVIEWS",
                         modifier = Modifier
                             .weight(1f)
@@ -232,7 +257,7 @@ fun UserScreen(
                     )
                     DividerStat()
                     StatCard(
-                        value = "88",
+                        value = savedCount.toString(),
                         label = "SAVED",
                         modifier = Modifier
                             .weight(1f)
@@ -243,7 +268,7 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- NUTRITION GOALS ---
+
             SectionHeader(
                 title = "Nutrition Goals",
                 action = "Details",
@@ -252,18 +277,14 @@ fun UserScreen(
             Spacer(modifier = Modifier.height(12.dp))
             NutritionCard(
                 caloriesGoal = caloriesGoal,
-                caloriesConsumed = caloriesConsumed,
                 proteinGoal = proteinGoal,
-                proteinConsumed = proteinConsumed,
                 carbsGoal = carbsGoal,
-                carbsConsumed = carbsConsumed,
-                fatGoal = fatGoal,
-                fatConsumed = fatConsumed
+                fatGoal = fatGoal
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // --- ACCOUNT SETTINGS ---
+
             SectionHeader(title = "Account Settings", action = "")
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -273,16 +294,6 @@ fun UserScreen(
                 subtitle = null,
                 bgColor = OrangeFoodGram.copy(alpha = 0.1f),
                 onTap = {
-                    // Guardar datos actuales en el savedStateHandle antes de navegar
-                    navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "personalInfoInput",
-                        mapOf(
-                            "name" to name,
-                            "username" to username,
-                            "email" to email,
-                            "location" to location
-                        )
-                    )
                     navController.navigate(PersonalInfo)
                 }
             )
@@ -296,9 +307,13 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // --- LOGOUT ---
+
             OutlinedButton(
-                onClick = onLogout,
+                onClick = {
+                    auth.signOut()
+                    UserSession.currentUserDocId = null
+                    onLogout()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -324,8 +339,6 @@ fun UserScreen(
     }
 }
 
-// ── COMPONENTES AUXILIARES ───────────────────────────────────────────────────
-
 @Composable
 fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
     Column(
@@ -343,7 +356,7 @@ fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
         Text(
             text = label,
             fontSize = 11.sp,
-            color = Color(0xFF607D8B), // BlueGrey aproximado
+            color = Color(0xFF607D8B),
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -384,14 +397,11 @@ fun SectionHeader(title: String, action: String, onAction: (() -> Unit)? = null)
 
 @Composable
 fun NutritionCard(
-    caloriesGoal: Float, caloriesConsumed: Float,
-    proteinGoal: Float, proteinConsumed: Float,
-    carbsGoal: Float, carbsConsumed: Float,
-    fatGoal: Float, fatConsumed: Float
+    caloriesGoal: Float,
+    proteinGoal: Float,
+    carbsGoal: Float,
+    fatGoal: Float
 ) {
-    val calProgress = (caloriesConsumed / caloriesGoal).coerceIn(0f, 1f)
-    val calPct = (calProgress * 100).toInt()
-
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = Color.White,
@@ -403,27 +413,20 @@ fun NutritionCard(
 
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = "${caloriesConsumed.toInt()}",
+                    text = "${caloriesGoal.toInt()}",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = " / ${caloriesGoal.toInt()} kcal",
+                    text = " kcal",
                     color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "$calPct%",
-                    color = OrangeFoodGram,
-                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { calProgress },
+                progress = { 1f },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(10.dp)
@@ -442,21 +445,21 @@ fun NutritionCard(
             ) {
                 MacroItem(
                     label = "Protein",
-                    consumed = "${proteinConsumed.toInt()}g",
+                    consumed = "${proteinGoal.toInt()}g",
                     color = Color(0xFFFF5252),
-                    progress = (proteinConsumed / proteinGoal).coerceIn(0f, 1f)
+                    progress = 1f
                 )
                 MacroItem(
                     label = "Carbs",
-                    consumed = "${carbsConsumed.toInt()}g",
+                    consumed = "${carbsGoal.toInt()}g",
                     color = Color(0xFFFF9800),
-                    progress = (carbsConsumed / carbsGoal).coerceIn(0f, 1f)
+                    progress = 1f
                 )
                 MacroItem(
                     label = "Fat",
-                    consumed = "${fatConsumed.toInt()}g",
+                    consumed = "${fatGoal.toInt()}g",
                     color = Color(0xFFFFC107),
-                    progress = (fatConsumed / fatGoal).coerceIn(0f, 1f)
+                    progress = 1f
                 )
             }
         }

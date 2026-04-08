@@ -46,3 +46,9 @@ object PersonalInfo
 
 @Serializable
 object ForgotPassword
+
+@Serializable
+object NutritionGoals
+
+@Serializable
+object PersonalInfo
