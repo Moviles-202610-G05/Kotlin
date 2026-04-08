@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.example.foodgram.utils.UserSession
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,32 +47,50 @@ fun UserScreen(
     onNavigateToPrivacySettings: () -> Unit,
     onLogout: () -> Unit
 ) {
-    // Datos de perfil (estado interno)
-    var name by remember { mutableStateOf("Alex Johnson") }
-    var username by remember { mutableStateOf("@alex_j") }
-    var email by remember { mutableStateOf("alex.j@email.com") }
-    var location by remember { mutableStateOf("London, UK") }
 
-    // Metas del usuario (opcional, si las tienes)
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+
+
+    var name by remember { mutableStateOf("Loading...") }
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
     var caloriesGoal by remember { mutableStateOf(2000f) }
     var proteinGoal by remember { mutableStateOf(150f) }
     var carbsGoal by remember { mutableStateOf(200f) }
     var fatGoal by remember { mutableStateOf(67f) }
 
-    var caloriesConsumed by remember { mutableStateOf(1200f) }
-    var proteinConsumed by remember { mutableStateOf(80f) }
-    var carbsConsumed by remember { mutableStateOf(140f) }
-    var fatConsumed by remember { mutableStateOf(35f) }
+    var caloriesConsumed by remember { mutableStateOf(0f) }
+    var proteinConsumed by remember { mutableStateOf(0f) }
+    var carbsConsumed by remember { mutableStateOf(0f) }
+    var fatConsumed by remember { mutableStateOf(0f) }
 
+    val userId = UserSession.currentUserDocId
 
-    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
-    LaunchedEffect(savedStateHandle) {
-        savedStateHandle?.getLiveData<Map<String, String>>("userInfo")?.observeForever { result ->
-            result?.let {
-                name = it["name"] ?: name
-                username = it["username"] ?: username
-                email = it["email"] ?: email
-                location = it["location"] ?: location
+    DisposableEffect(userId) {
+        if (userId == null) {
+            onDispose { }
+        } else {
+            val listener = db.collection("user").document(userId)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+
+                    if (snapshot.exists()) {
+                        name = snapshot.getString("name") ?: "User"
+                        username = snapshot.getString("username") ?: ""
+                        email = snapshot.getString("email") ?: ""
+                        location = snapshot.getString("location") ?: "Not defined"
+
+                        caloriesGoal = snapshot.getDouble("caloriesGoal")?.toFloat() ?: 2000f
+                        proteinGoal = snapshot.getDouble("proteinGoal")?.toFloat() ?: 150f
+                        carbsGoal = snapshot.getDouble("carbsGoal")?.toFloat() ?: 200f
+                        fatGoal = snapshot.getDouble("fatGoal")?.toFloat() ?: 67f
+                    }
+                }
+
+            onDispose {
+                listener.remove()
             }
         }
     }
@@ -216,7 +237,7 @@ fun UserScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatCard(
-                        value = "42",
+                        value = "0",
                         label = "ORDERS",
                         modifier = Modifier
                             .weight(1f)
@@ -224,7 +245,7 @@ fun UserScreen(
                     )
                     DividerStat()
                     StatCard(
-                        value = "15",
+                        value = "0",
                         label = "REVIEWS",
                         modifier = Modifier
                             .weight(1f)
@@ -232,7 +253,7 @@ fun UserScreen(
                     )
                     DividerStat()
                     StatCard(
-                        value = "88",
+                        value = "0",
                         label = "SAVED",
                         modifier = Modifier
                             .weight(1f)
@@ -273,16 +294,6 @@ fun UserScreen(
                 subtitle = null,
                 bgColor = OrangeFoodGram.copy(alpha = 0.1f),
                 onTap = {
-                    // Guardar datos actuales en el savedStateHandle antes de navegar
-                    navController.currentBackStackEntry?.savedStateHandle?.set(
-                        "personalInfoInput",
-                        mapOf(
-                            "name" to name,
-                            "username" to username,
-                            "email" to email,
-                            "location" to location
-                        )
-                    )
                     navController.navigate(PersonalInfo)
                 }
             )
@@ -298,7 +309,10 @@ fun UserScreen(
 
             // --- LOGOUT ---
             OutlinedButton(
-                onClick = onLogout,
+                onClick = {
+                    auth.signOut()
+                    onLogout()
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -324,8 +338,6 @@ fun UserScreen(
     }
 }
 
-// ── COMPONENTES AUXILIARES ───────────────────────────────────────────────────
-
 @Composable
 fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
     Column(
@@ -343,7 +355,7 @@ fun StatCard(value: String, label: String, modifier: Modifier = Modifier) {
         Text(
             text = label,
             fontSize = 11.sp,
-            color = Color(0xFF607D8B), // BlueGrey aproximado
+            color = Color(0xFF607D8B),
             fontWeight = FontWeight.SemiBold
         )
     }
@@ -384,10 +396,14 @@ fun SectionHeader(title: String, action: String, onAction: (() -> Unit)? = null)
 
 @Composable
 fun NutritionCard(
-    caloriesGoal: Float, caloriesConsumed: Float,
-    proteinGoal: Float, proteinConsumed: Float,
-    carbsGoal: Float, carbsConsumed: Float,
-    fatGoal: Float, fatConsumed: Float
+    caloriesGoal: Float,
+    caloriesConsumed: Float,
+    proteinGoal: Float,
+    proteinConsumed: Float,
+    carbsGoal: Float,
+    carbsConsumed: Float,
+    fatGoal: Float,
+    fatConsumed: Float
 ) {
     val calProgress = (caloriesConsumed / caloriesGoal).coerceIn(0f, 1f)
     val calPct = (calProgress * 100).toInt()
