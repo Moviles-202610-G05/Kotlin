@@ -6,6 +6,7 @@ import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -41,6 +42,7 @@ import com.google.maps.android.compose.*
 import kotlinx.coroutines.launch
 
 data class MapRestaurant(
+    val id: String = "",
     val name: String = "",
     val rating: Double = 0.0,
     val badge: String = "",
@@ -106,6 +108,7 @@ fun MapScreen(
     onNavigateToSearch: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
+    onNavigateToRestaurantDetail: (String) -> Unit = {},
     viewModel: MapViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -259,6 +262,11 @@ fun MapScreen(
                                         durationMs = 1000
                                     )
                                 }
+                            },
+                            onDoubleTap = {
+                                if (restaurant.id.isNotEmpty()) {
+                                    onNavigateToRestaurantDetail(restaurant.id)
+                                }
                             }
                         )
                     }
@@ -290,10 +298,29 @@ fun CategoryChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun RestaurantMapCard(name: String, rating: String, distance: String, badge: String, badge2: String?, imageUrl: String, onClick: () -> Unit = {}) {
-    Surface(modifier = Modifier.width(280.dp), shape = RoundedCornerShape(32.dp), color = Color.White, shadowElevation = 6.dp, onClick = onClick) {
+fun RestaurantMapCard(
+    name: String,
+    rating: String,
+    distance: String,
+    badge: String,
+    badge2: String?,
+    imageUrl: String,
+    onClick: () -> Unit = {},
+    onDoubleTap: () -> Unit = {}
+) {
+    Surface(
+        modifier = Modifier
+            .width(280.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onDoubleClick = onDoubleTap
+            ),
+        shape = RoundedCornerShape(32.dp),
+        color = Color.White,
+        shadowElevation = 6.dp
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = imageUrl,

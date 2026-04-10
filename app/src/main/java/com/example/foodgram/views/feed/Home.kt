@@ -1,6 +1,7 @@
 package com.example.foodgram.views.feed
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,6 +41,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
     onNavigateToMap: () -> Unit = {},
+    onNavigateToRestaurantDetail: (String) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
     var showCommentDialog by remember { mutableStateOf<Post?>(null) }
@@ -132,7 +134,8 @@ fun HomeScreen(
                         PostItem(
                             post = post,
                             onLikeClick = { viewModel.toggleLike(post) },
-                            onCommentClick = { showCommentDialog = post }
+                            onCommentClick = { showCommentDialog = post },
+                            onRestaurantClick = { onNavigateToRestaurantDetail(post.restaurantId) }
                         )
                     }
                 }
@@ -191,7 +194,8 @@ fun CommentDialog(
 fun PostItem(
     post: Post,
     onLikeClick: () -> Unit,
-    onCommentClick: () -> Unit
+    onCommentClick: () -> Unit,
+    onRestaurantClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Header
@@ -201,16 +205,48 @@ fun PostItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray)
-            )
+            if (!post.profilePhoto.isNullOrEmpty()) {
+                AsyncImage(
+                    model = post.profilePhoto,
+                    contentDescription = "Profile Photo",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF0F0F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Default Avatar",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.clickable { onRestaurantClick() }) {
                 Text(post.username, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("${post.restaurantName} • ${formatTimestamp(post.createdAt)}", color = Color.Gray, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${post.restaurantName} • ${formatTimestamp(post.createdAt)}",
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                }
             }
             Spacer(modifier = Modifier.weight(1f))
             Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.Gray)
@@ -223,7 +259,8 @@ fun PostItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(400.dp)
-                .background(Color(0xFFEEEEEE)),
+                .background(Color(0xFFEEEEEE))
+                .clickable { onRestaurantClick() },
             contentScale = androidx.compose.ui.layout.ContentScale.Crop
         )
 
