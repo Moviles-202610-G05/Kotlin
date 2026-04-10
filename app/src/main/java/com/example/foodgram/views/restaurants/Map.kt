@@ -95,8 +95,8 @@ fun calculateDistanceMeters(start: LatLng, end: LatLng): Float {
 }
 
 fun formatDistance(meters: Float): String {
-    val miles = meters * 0.000621371f
-    return "%.1f miles away".format(miles)
+    val km = meters / 1000f
+    return "%.1f km away".format(km)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
