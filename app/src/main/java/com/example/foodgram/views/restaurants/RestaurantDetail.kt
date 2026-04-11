@@ -218,7 +218,7 @@ fun LocationSection(restaurant: MapRestaurant) {
         Surface(modifier = Modifier.fillMaxWidth().height(200.dp), shape = RoundedCornerShape(24.dp), color = Color.LightGray) {
             // Static map preview
             AsyncImage(
-                model = "https://maps.googleapis.com/maps/api/staticmap?center=${restaurant.lat},${restaurant.long}&zoom=15&size=600x300&key=AIzaSyCY2NXIVhpZbJ3vdCzQzbKPt0h6yShDZMA",
+                model = "https://maps.googleapis.com/maps/api/staticmap?center=${restaurant.lat},${restaurant.long}&zoom=15&size=600x300&key=${com.example.foodgram.BuildConfig.MAPS_API_KEY}",
                 contentDescription = "Map view",
                 contentScale = ContentScale.Crop
             )
