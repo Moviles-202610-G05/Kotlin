@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
                                 onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(RestaurantsMap) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id -> 
                                     navController.navigate(RestaurantDetail(id))
                                 }
@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
                                 onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(RestaurantsMap) }
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) }
                             )
                         }
 
@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
                                 onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(RestaurantsMap) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
                                 }
@@ -155,7 +155,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToHome = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToMenu = { navController.navigate(Menu) },
-                                onNavigateToMap = { navController.navigate(RestaurantsMap) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToOrders = { /* TODO */ },
                                 onNavigateToReviews = { /* TODO */ },
                                 onNavigateToSaved = { /* TODO */ },
@@ -175,8 +175,10 @@ class MainActivity : ComponentActivity() {
                             NutritionGoalsScreen(navController = navController)
                         }
                         composable<Menu> { /* TODO */ }
-                        composable<RestaurantsMap> {
+                        composable<RestaurantsMap> { backStackEntry ->
+                            val mapRoute: RestaurantsMap = backStackEntry.toRoute()
                             MapScreen(
+                                restaurantId = mapRoute.restaurantId,
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },

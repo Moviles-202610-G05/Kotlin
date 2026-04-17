@@ -47,11 +47,9 @@ class PostRepository {
                 doc.toObject(Post::class.java)?.copy(id = doc.id)
             }
 
-            // If user is not logged in, just return posts without like status
+            // If user is not logged in, return posts without like status
             if (currentUserId == null) return basePosts
 
-            // In a real app, you might want to optimize this to avoid many network calls
-            // For now, let's keep it simple but ensure it doesn't get stuck
             basePosts.map { post ->
                 try {
                     val likeDoc = db.collection("posts").document(post.id)

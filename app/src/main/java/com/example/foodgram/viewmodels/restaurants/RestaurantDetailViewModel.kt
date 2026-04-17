@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.foodgram.models.restaurants.MenuItem
 import com.example.foodgram.models.restaurants.RestaurantRepository
 import com.example.foodgram.models.restaurants.RestaurantReview
-import com.example.foodgram.views.restaurants.MapRestaurant
+import com.example.foodgram.models.restaurants.MapRestaurant
 import kotlinx.coroutines.launch
 
 class RestaurantDetailViewModel(
@@ -34,12 +34,11 @@ class RestaurantDetailViewModel(
         }
         viewModelScope.launch {
             isLoading = true
-            // Use initial data if available to show header immediately
+
             if (initialData != null) {
                 restaurant = initialData
             }
-            
-            // In a real app, you might fetch the full restaurant object by ID here if not provided
+
             if (restaurant == null) {
                 restaurant = repository.getRestaurantById(restaurantId)
             }

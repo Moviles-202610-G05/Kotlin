@@ -1,6 +1,5 @@
 package com.example.foodgram.models.restaurants
 
-import com.example.foodgram.views.restaurants.MapRestaurant
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
@@ -10,16 +9,11 @@ class RestaurantRepository {
 
     suspend fun getRestaurants(): List<MapRestaurant> {
         return try {
-            // Try "Restaurants" first
-            val snapshot = db.collection("restaurants")
-                .get()
-                .await()
-            
-            var list = snapshot.toObjects(MapRestaurant::class.java)
+            val snapshot = db.collection("restaurants").get().await()
+            val list = snapshot.toObjects(MapRestaurant::class.java)
 
-
-            // Filter out any invalid documents
-            list.filter { it.name.isNotBlank() && (it.lat != 0.0 || it.position.geopoint.latitude != 0.0) }
+            // Return the filtered list
+            list.filter { it.name.isNotBlank() }
         } catch (e: Exception) {
             emptyList()
         }
@@ -36,12 +30,11 @@ class RestaurantRepository {
         }
     }
 
+        
     suspend fun getCategories(): List<String> {
         return try {
-            val snapshot = db.collection("categories")
-                .get()
-                .await()
-            snapshot.documents.map { it.getString("name") ?: "" }.filter { it.isNotBlank() }
+            val snapshot = db.collection("categories").get().await()
+            snapshot.documents.mapNotNull { it.getString("name") }.filter { it.isNotBlank() }
         } catch (e: Exception) {
             emptyList()
         }

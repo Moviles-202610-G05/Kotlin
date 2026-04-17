@@ -51,7 +51,7 @@ fun SearchRestaurantsScreen(
     onNavigateToFeed: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {},
+    onNavigateToMap: (String?) -> Unit = {},
     onNavigateToRestaurantDetail: (String) -> Unit = {}
 ) {
     Scaffold(
@@ -61,7 +61,7 @@ fun SearchRestaurantsScreen(
                 NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Search, contentDescription = null) }, label = { Text("SEARCH") })
                 NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, contentDescription = null) }, label = { Text("PROFILE") })
                 NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Menu, contentDescription = null) }, label = { Text("Menu") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMap, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
+                NavigationBarItem(selected = false, onClick = { onNavigateToMap(null) }, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
             }
         }
     ) { innerPadding ->

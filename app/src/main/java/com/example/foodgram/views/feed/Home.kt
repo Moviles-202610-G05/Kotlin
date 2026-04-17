@@ -40,7 +40,7 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {},
+    onNavigateToMap: (String?) -> Unit = {},
     onNavigateToRestaurantDetail: (String) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
@@ -104,7 +104,7 @@ fun HomeScreen(
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = onNavigateToMap,
+                    onClick = { onNavigateToMap(null) },
                     icon = { Icon(Icons.Default.Place, contentDescription = "Map") },
                     label = { Text("MAP") }
                 )

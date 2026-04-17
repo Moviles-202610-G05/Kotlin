@@ -24,7 +24,7 @@ import com.example.foodgram.models.restaurants.MenuItem
 import com.example.foodgram.models.restaurants.RestaurantReview
 import com.example.foodgram.ui.theme.FoodGramOrange
 import com.example.foodgram.viewmodels.restaurants.RestaurantDetailViewModel
-import com.example.foodgram.views.restaurants.MapRestaurant
+import com.example.foodgram.models.restaurants.MapRestaurant
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,7 +37,7 @@ fun RestaurantDetailScreen(
     onNavigateToSearch: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {},
+    onNavigateToMap: (String?) -> Unit = {},
     viewModel: RestaurantDetailViewModel = viewModel()
 ) {
     LaunchedEffect(restaurantId) {
@@ -55,13 +55,31 @@ fun RestaurantDetailScreen(
                 NavigationBarItem(selected = true, onClick = onNavigateToSearch, icon = { Icon(Icons.Default.Search, null) }, label = { Text("SEARCH") })
                 NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, null) }, label = { Text("PROFILE") })
                 NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Restaurant, null) }, label = { Text("MENU") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMap, icon = { Icon(Icons.Default.Map, null) }, label = { Text("MAP") })
+                NavigationBarItem(selected = false, onClick = { onNavigateToMap(null) }, icon = { Icon(Icons.Default.Map, null) }, label = { Text("MAP") })
             }
         }
     ) { padding ->
-        if (restaurant == null) {
+        if (viewModel.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = FoodGramOrange)
+            }
+        } else if (restaurant == null) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(Icons.Default.ErrorOutline, null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Restaurant not found", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("The restaurant might have been removed.", color = Color.Gray)
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = onNavigateBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = FoodGramOrange)
+                ) {
+                    Text("Go Back")
+                }
             }
         } else {
             Column(
@@ -78,7 +96,7 @@ fun RestaurantDetailScreen(
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)),
                         contentScale = ContentScale.Crop,
                         placeholder = coil.compose.rememberAsyncImagePainter(
-                            model = "https://maps.googleapis.com/maps/api/staticmap?center=${restaurant.lat},${restaurant.long}&zoom=15&size=600x300&key=AIzaSyCY2NXIVhpZbJ3vdCzQzbKPt0h6yShDZMA"
+                            model = "https://maps.googleapis.com/maps/api/staticmap?center=${restaurant.lat},${restaurant.long}&zoom=15&size=600x300&key=${com.example.foodgram.BuildConfig.MAPS_API_KEY}"
                         )
                     )
                     
@@ -108,36 +126,36 @@ fun RestaurantDetailScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Availability Card
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFFF0FFF4), // Light green
-                        border = BorderStroke(1.dp, Color(0xFFC6F6D5))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(8.dp).background(Color(0xFF48BB78), CircleShape))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("LIVE AVAILABILITY", color = Color(0xFF2F855A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("Updated 1m ago", color = Color.Gray, fontSize = 10.sp)
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                Text("${restaurant.spotsA}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
-                                Text(" Available Now", fontSize = 16.sp, color = Color(0xFF2D3748), modifier = Modifier.padding(bottom = 4.dp))
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("Total: ${restaurant.spots} spots", fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { restaurant.spotsA.toFloat() / restaurant.spots.toFloat() },
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                                color = Color(0xFF48BB78),
-                                trackColor = Color(0xFFEDF2F7)
-                            )
-                        }
-                    }
+                    //Surface(
+                    //    modifier = Modifier.fillMaxWidth(),
+                    //    shape = RoundedCornerShape(16.dp),
+                    //    color = Color(0xFFF0FFF4), // Light green
+                    //    border = BorderStroke(1.dp, Color(0xFFC6F6D5))
+                    //) {
+                    //    Column(modifier = Modifier.padding(16.dp)) {
+                    //        Row(verticalAlignment = Alignment.CenterVertically) {
+                    //            Box(modifier = Modifier.size(8.dp).background(Color(0xFF48BB78), CircleShape))
+                    //            Spacer(modifier = Modifier.width(8.dp))
+                    //            Text("LIVE AVAILABILITY", color = Color(0xFF2F855A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    //            Spacer(modifier = Modifier.weight(1f))
+                    //            Text("Updated 1m ago", color = Color.Gray, fontSize = 10.sp)
+                    //        }
+                    //        Spacer(modifier = Modifier.height(12.dp))
+                    //        Row(verticalAlignment = Alignment.Bottom) {
+                    //            Text("${restaurant.spotsA}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
+                    //            Text(" Available Now", fontSize = 16.sp, color = Color(0xFF2D3748), modifier = Modifier.padding(bottom = 4.dp))
+                    //            Spacer(modifier = Modifier.weight(1f))
+                    //            Text("Total: ${restaurant.spots} spots", fontSize = 12.sp, color = Color.Gray)
+                    //        }
+                    //        Spacer(modifier = Modifier.height(8.dp))
+                    //        LinearProgressIndicator(
+                    //            progress = { restaurant.spotsA.toFloat() / restaurant.spots.toFloat() },
+                    //            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                    //            color = Color(0xFF48BB78),
+                    //            trackColor = Color(0xFFEDF2F7)
+                    //        )
+                    //    }
+                    //}
                 }
 
                 // Tabs
@@ -165,9 +183,10 @@ fun RestaurantDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Tab Content
+                // Inside RestaurantDetailScreen
                 when (selectedTab) {
                     0 -> MenuSection(viewModel.menuItems)
-                    1 -> LocationSection(restaurant)
+                    1 -> LocationSection(restaurant, onNavigateToMap) // Pass the callback here
                     2 -> ReviewsSection(viewModel.reviews)
                 }
             }
@@ -207,34 +226,61 @@ fun MenuSection(items: List<MenuItem>) {
 }
 
 @Composable
-fun LocationSection(restaurant: MapRestaurant) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+fun LocationSection(
+    restaurant: MapRestaurant,
+    onNavigateToMap: (String) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal =20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.LocationOn, null, tint = FoodGramOrange, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text("Location & Directions", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
+
         Spacer(modifier = Modifier.height(16.dp))
-        Surface(modifier = Modifier.fillMaxWidth().height(200.dp), shape = RoundedCornerShape(24.dp), color = Color.LightGray) {
-            // Static map preview
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Color.LightGray
+        ) {
+            //Place holder
+            val lat = restaurant.lat
+            val lng = restaurant.long
+            val apiKey = com.example.foodgram.BuildConfig.MAPS_API_KEY
+            val staticMapUrl = "https://maps.googleapis.com/maps/api/staticmap?" +
+                    "center=$lat,$lng" +
+                    "&zoom=15" +
+                    "&size=600x300" +
+                    "&markers=color:orange%7C$lat,$lng" +
+                    "&key=$apiKey"
+
             AsyncImage(
-                model = "https://maps.googleapis.com/maps/api/staticmap?center=${restaurant.lat},${restaurant.long}&zoom=15&size=600x300&key=${com.example.foodgram.BuildConfig.MAPS_API_KEY}",
-                contentDescription = "Map view",
+                model = staticMapUrl,
+                contentDescription = "Map view showing ${restaurant.name}",
                 contentScale = ContentScale.Crop
             )
         }
+
         Spacer(modifier = Modifier.height(16.dp))
-        Text(restaurant.direction, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+
+        Text(
+            text = restaurant.direction.ifEmpty { "Address not available" },
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         Button(
-            onClick = {},
+            onClick = { onNavigateToMap(restaurant.id) }, // Triggers navigation to MapView
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = FoodGramOrange)
         ) {
             Icon(Icons.Default.Navigation, null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Get Directions")
+            Text("View on Map")
         }
     }
 }
