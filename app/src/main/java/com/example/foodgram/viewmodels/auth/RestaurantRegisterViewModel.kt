@@ -7,13 +7,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.example.foodgram.views.auth.MenuItem
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.example.foodgram.utils.UserSession
 import java.util.UUID
 
 class RestaurantRegisterViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     // --- Restaurant State ---
     var ownerName by mutableStateOf("")
@@ -51,13 +54,13 @@ class RestaurantRegisterViewModel : ViewModel() {
     }
 
     fun onEmailChange(newValue: String) {
-        if (newValue.length < 25) {
+        if (newValue.length < 35) {
             if (newValue != email) {
                 email = newValue
                 errorMessage = null
             }
         } else {
-            errorMessage = "Email must be less than 25 characters"
+            errorMessage = "Email must be less than 35 characters"
         }
     }
 
@@ -235,22 +238,36 @@ class RestaurantRegisterViewModel : ViewModel() {
     }
 
     private fun saveOwnerUser(onSuccess: () -> Unit) {
-        val userData = hashMapOf(
-            "name" to ownerName,
-            "username" to username,
-            "email" to email,
-            "password" to password,
-            "roll" to "OWNER",
-            "restaurant" to restaurantName
-        )
+        // 1. Create user in Firebase Auth
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnSuccessListener { authResult ->
+                val uid = authResult.user?.uid
+                if (uid != null) {
+                    val userData = hashMapOf(
+                        "name" to ownerName,
+                        "username" to username,
+                        "email" to email,
+                        "password" to password,
+                        "roll" to "OWNER",
+                        "restaurant" to restaurantName,
+                        "uid" to uid
+                    )
 
-        db.collection("user").add(userData)
-            .addOnSuccessListener { 
-                isLoading = false
-                onSuccess() 
+                    // 2. Save data to Firestore
+                    db.collection("user").add(userData)
+                        .addOnSuccessListener { documentReference ->
+                            UserSession.currentUserDocId = documentReference.id
+                            isLoading = false
+                            onSuccess() 
+                        }
+                        .addOnFailureListener {
+                            errorMessage = "Auth successful but database failed: ${it.localizedMessage}"
+                            isLoading = false
+                        }
+                }
             }
             .addOnFailureListener {
-                errorMessage = "User Error: ${it.localizedMessage}"
+                errorMessage = "Authentication failed: ${it.localizedMessage}"
                 isLoading = false
             }
     }

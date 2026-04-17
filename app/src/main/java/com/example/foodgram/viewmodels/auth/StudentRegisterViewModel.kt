@@ -6,10 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.example.foodgram.utils.UserSession
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 class StudentRegisterViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     var name by mutableStateOf("")
     var username by mutableStateOf("")
@@ -40,13 +42,13 @@ class StudentRegisterViewModel : ViewModel() {
     }
 
     fun onEmailChange(newValue: String) {
-        if (newValue.length < 25) {
+        if (newValue.length < 35) {
             if (newValue != email) {
                 email = newValue
                 errorMessage = null
             }
         } else {
-            errorMessage = "Email must be less than 25 characters"
+            errorMessage = "Email must be less than 35 characters"
         }
     }
 
@@ -107,28 +109,39 @@ class StudentRegisterViewModel : ViewModel() {
         isLoading = true
         errorMessage = null
 
-                val userData = hashMapOf(
-                    "name" to name,
-                    "username" to username,
-                    "email" to email,
-                    "password" to password,
-                    "universityId" to universityId,
-                    "roll" to "ESTUDIANTE",
-                    "preferences" to selectedPreferences.toList(),
-                    "carrier" to "",
-                    "ordersCount" to 0,
-                    "reviewsCount" to 0,
-                    "savedCount" to 0
-                )
+        // 1. Create user in Firebase Auth
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnSuccessListener { authResult ->
+                val uid = authResult.user?.uid
+                if (uid != null) {
+                    val userData = hashMapOf(
+                        "name" to name,
+                        "username" to username,
+                        "email" to email,
+                        "password" to password, // Still keeping it for now as per your request, though Auth handles it
+                        "universityId" to universityId,
+                        "roll" to "ESTUDIANTE",
+                        "preferences" to selectedPreferences.toList(),
+                        "carrier" to "",
+                        "ordersCount" to 0,
+                        "reviewsCount" to 0,
+                        "savedCount" to 0,
+                        "uid" to uid // Store the Auth UID for easier linking
+                    )
 
-        db.collection("user")
-            .add(userData)
-            .addOnSuccessListener {
-                    documentReference ->
-                val docId = documentReference.id
-                UserSession.currentUserDocId = docId
-                isLoading = false
-                onSuccess()
+                    // 2. Save additional data to Firestore
+                    db.collection("user")
+                        .add(userData)
+                        .addOnSuccessListener { documentReference ->
+                            UserSession.currentUserDocId = documentReference.id
+                            isLoading = false
+                            onSuccess()
+                        }
+                        .addOnFailureListener { exception ->
+                            isLoading = false
+                            errorMessage = "Auth successful but database failed: ${exception.localizedMessage}"
+                        }
+                }
             }
             .addOnFailureListener { exception ->
                 isLoading = false
