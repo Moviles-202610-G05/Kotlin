@@ -64,18 +64,20 @@ fun StudentRegisterScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         // --- Error Message ---
-        viewModel.errorMessage?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+        Box(modifier = Modifier.height(40.dp)) {
+            viewModel.errorMessage?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
         }
 
         // --- Input Fields ---
         CustomTextField(
             value = viewModel.name,
-            onValueChange = { viewModel.name = it },
+            onValueChange = { viewModel.onNameChange(it) },
             label = "Full Name",
             placeholder = "Enter your full name",
             leadingIcon = Icons.Default.Person
@@ -85,7 +87,7 @@ fun StudentRegisterScreen(
 
         CustomTextField(
             value = viewModel.username,
-            onValueChange = { viewModel.username = it },
+            onValueChange = { viewModel.onUsernameChange(it) },
             label = "Username",
             placeholder = "Choose a username",
             leadingIcon = Icons.Default.AlternateEmail
@@ -95,7 +97,7 @@ fun StudentRegisterScreen(
 
         CustomTextField(
             value = viewModel.email,
-            onValueChange = { viewModel.email = it },
+            onValueChange = { viewModel.onEmailChange(it) },
             label = "Email Address",
             placeholder = "Enter your email",
             leadingIcon = Icons.Default.Email
@@ -105,7 +107,7 @@ fun StudentRegisterScreen(
 
         CustomTextField(
             value = viewModel.universityId,
-            onValueChange = { viewModel.universityId = it },
+            onValueChange = { viewModel.onUniversityIdChange(it) },
             label = "University ID",
             placeholder = "Enter your ID number",
             leadingIcon = Icons.Default.Badge
@@ -115,7 +117,7 @@ fun StudentRegisterScreen(
 
         CustomTextField(
             value = viewModel.password,
-            onValueChange = { viewModel.password = it },
+            onValueChange = { viewModel.onPasswordChange(it) },
             label = "Password",
             placeholder = "Create a password",
             leadingIcon = Icons.Default.Lock,

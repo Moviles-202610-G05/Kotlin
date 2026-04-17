@@ -16,6 +16,65 @@ class StudentRegisterViewModel : ViewModel() {
     var email by mutableStateOf("")
     var password by mutableStateOf("")
     var universityId by mutableStateOf("")
+
+    fun onNameChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != name) {
+                name = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Name must be less than 25 characters"
+        }
+    }
+
+    fun onUsernameChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != username) {
+                username = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Username must be less than 25 characters"
+        }
+    }
+
+    fun onEmailChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != email) {
+                email = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Email must be less than 25 characters"
+        }
+    }
+
+    fun onPasswordChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != password) {
+                password = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Password must be less than 25 characters"
+        }
+    }
+
+    fun onUniversityIdChange(newValue: String) {
+        if (newValue.all { it.isDigit() }) {
+            if (newValue.length < 9) {
+                if (newValue != universityId) {
+                    universityId = newValue
+                    errorMessage = null
+                }
+            } else {
+                errorMessage = "University ID must be less than 9 characters"
+            }
+        } else {
+            errorMessage = "University ID must only contain numbers"
+        }
+    }
     
     // Preferences logic
     val selectedPreferences = mutableStateListOf<String>()
