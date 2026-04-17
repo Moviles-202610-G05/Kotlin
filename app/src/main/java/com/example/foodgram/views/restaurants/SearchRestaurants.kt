@@ -1,6 +1,7 @@
 package com.example.foodgram.views.restaurants
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -50,7 +51,8 @@ fun SearchRestaurantsScreen(
     onNavigateToFeed: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {}
+    onNavigateToMap: (String?) -> Unit = {},
+    onNavigateToRestaurantDetail: (String) -> Unit = {}
 ) {
     Scaffold(
         bottomBar = {
@@ -59,7 +61,7 @@ fun SearchRestaurantsScreen(
                 NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Search, contentDescription = null) }, label = { Text("SEARCH") })
                 NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, contentDescription = null) }, label = { Text("PROFILE") })
                 NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Menu, contentDescription = null) }, label = { Text("Menu") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMap, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
+                NavigationBarItem(selected = false, onClick = { onNavigateToMap(null) }, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
             }
         }
     ) { innerPadding ->
@@ -140,7 +142,10 @@ fun SearchRestaurantsScreen(
 
             // Restaurant List
             items(restaurants) { restaurant ->
-                RestaurantListItem(restaurant)
+                RestaurantListItem(
+                    restaurant = restaurant,
+                    onRestaurantClick = { onNavigateToRestaurantDetail(restaurant.id.toString()) }
+                )
             }
         }
     }
@@ -161,9 +166,9 @@ fun RecommendedCard(name: String, rating: String) {
 }
 
 @Composable
-fun RestaurantListItem(restaurant: Restaurant) {
+fun RestaurantListItem(restaurant: Restaurant, onRestaurantClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().clickable { onRestaurantClick() },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

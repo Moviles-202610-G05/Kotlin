@@ -2,10 +2,10 @@ package com.example.foodgram.views.restaurants
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -30,47 +30,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.foodgram.ui.theme.FoodGramOrange
 import com.example.foodgram.viewmodels.map.MapViewModel
+import com.example.foodgram.models.restaurants.MapRestaurant
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.PropertyName
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.launch
-
-data class MapRestaurant(
-    val name: String = "",
-    val rating: Double = 0.0,
-    val badge: String = "",
-    val badge2: String? = null,
-    val cuisine: String = "",
-    val description: String = "",
-    val direction: String = "",
-    val distance: String = "",
-    val image: String = "",
-    val lat: Double = 0.0,
-    val long: Double = 0.0,
-    @get:PropertyName("nuberReviews") @set:PropertyName("nuberReviews") var nuberReviews: Long = 0,
-    val price: String = "",
-    val spots: Long = 0,
-    val spotsA: Long = 0,
-    val tags: List<String> = emptyList(),
-    val time: String = "",
-    val position: MapPosition = MapPosition()
-) {
-    val location: LatLng get() = if (lat != 0.0 && long != 0.0) {
-        LatLng(lat, long)
-    } else {
-        LatLng(position.geopoint.latitude, position.geopoint.longitude)
-    }
-}
-
-data class MapPosition(
-    val geohash: String = "",
-    val geopoint: GeoPoint = GeoPoint(0.0, 0.0)
-)
 
 fun getCategoryIcon(category: String): androidx.compose.ui.graphics.vector.ImageVector {
     return when (category.lowercase()) {
@@ -86,7 +54,7 @@ fun getCategoryIcon(category: String): androidx.compose.ui.graphics.vector.Image
 
 fun calculateDistanceMeters(start: LatLng, end: LatLng): Float {
     val results = FloatArray(1)
-    Location.distanceBetween(
+    android.location.Location.distanceBetween(
         start.latitude, start.longitude,
         end.latitude, end.longitude,
         results
@@ -102,34 +70,43 @@ fun formatDistance(meters: Float): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(
+    restaurantId: String? = null,
     onNavigateToFeed: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
+    onNavigateToRestaurantDetail: (String) -> Unit = {},
     viewModel: MapViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-    val defaultLocation = LatLng(4.60971, -74.08175) // Bogotá center
+    val defaultLocation = LatLng(4.60971, -74.08175) // Bogotá 
     
-    var selectedCategory by remember { mutableStateOf("All") }
     var userLocation by remember { mutableStateOf(defaultLocation) }
     
-    val sortedRestaurants = remember(selectedCategory, userLocation, viewModel.restaurants) {
-        val filtered = if (selectedCategory.equals("All", ignoreCase = true)) {
-            viewModel.restaurants
-        } else {
-            viewModel.restaurants.filter { restaurant ->
-                restaurant.cuisine.contains(selectedCategory, ignoreCase = true) ||
-                        restaurant.tags.any { it.contains(selectedCategory, ignoreCase = true) }
-            }
-        }
-        filtered.sortedBy { calculateDistanceMeters(userLocation, it.location) }
+    val sortedRestaurants = remember(userLocation, viewModel.restaurants, viewModel.selectedCategory) {
+        viewModel.getFilteredRestaurants(userLocation)
     }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(defaultLocation, 15f)
+    }
+
+    // Effect to center on specific restaurant if restaurantId is provided
+    LaunchedEffect(restaurantId, viewModel.restaurants) {
+        if (restaurantId != null && viewModel.restaurants.isNotEmpty()) {
+            val targetRestaurant = viewModel.restaurants.find { it.id == restaurantId }
+            targetRestaurant?.let {
+                // First ensure "All" is selected so the marker is visible
+                viewModel.selectedCategory = "All"
+                
+                cameraPositionState.animate(
+                    update = CameraUpdateFactory.newLatLngZoom(it.location, 17f),
+                    durationMs = 1000
+                )
+            }
+        }
     }
 
     var hasLocationPermission by remember {
@@ -149,7 +126,6 @@ fun MapScreen(
                     result.lastLocation?.let {
                         val newLatLng = LatLng(it.latitude, it.longitude)
                         userLocation = newLatLng
-                        // Optionally auto-center map on first location fix
                     }
                 }
             }
@@ -178,12 +154,12 @@ fun MapScreen(
         ) {
             sortedRestaurants.forEach { restaurant ->
                 if (restaurant.name.isNotBlank()) {
-                    key(restaurant.name) {
-                        val markerState = rememberUpdatedMarkerState(position = restaurant.location)
+                    key(restaurant.id) {
                         Marker(
-                            state = markerState,
+                            state = rememberMarkerState(position = restaurant.location),
                             title = restaurant.name,
-                            snippet = "${restaurant.rating} stars"
+                            snippet = "${restaurant.rating} stars",
+                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)
                         )
                     }
                 }
@@ -225,14 +201,14 @@ fun MapScreen(
                 }
             }
 
-            // Categories from ViewModel
+            // Categories
             LazyRow(modifier = Modifier.padding(top = 16.dp), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(viewModel.categories) { category ->
                     CategoryChip(
                         text = category,
                         icon = getCategoryIcon(category),
-                        selected = selectedCategory.equals(category, ignoreCase = true),
-                        onSelected = { selectedCategory = category }
+                        selected = viewModel.selectedCategory.equals(category, ignoreCase = true),
+                        onSelected = { viewModel.selectedCategory = category }
                     )
                 }
             }
@@ -258,6 +234,11 @@ fun MapScreen(
                                         update = CameraUpdateFactory.newLatLngZoom(restaurant.location, 17f),
                                         durationMs = 1000
                                     )
+                                }
+                            },
+                            onDoubleTap = {
+                                if (restaurant.id.isNotEmpty()) {
+                                    onNavigateToRestaurantDetail(restaurant.id)
                                 }
                             }
                         )
@@ -290,10 +271,29 @@ fun CategoryChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVe
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun RestaurantMapCard(name: String, rating: String, distance: String, badge: String, badge2: String?, imageUrl: String, onClick: () -> Unit = {}) {
-    Surface(modifier = Modifier.width(280.dp), shape = RoundedCornerShape(32.dp), color = Color.White, shadowElevation = 6.dp, onClick = onClick) {
+fun RestaurantMapCard(
+    name: String,
+    rating: String,
+    distance: String,
+    badge: String,
+    badge2: String?,
+    imageUrl: String,
+    onClick: () -> Unit = {},
+    onDoubleTap: () -> Unit = {}
+) {
+    Surface(
+        modifier = Modifier
+            .width(280.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onDoubleClick = onDoubleTap
+            ),
+        shape = RoundedCornerShape(32.dp),
+        color = Color.White,
+        shadowElevation = 6.dp
+    ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = imageUrl,

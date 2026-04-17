@@ -40,7 +40,7 @@ fun UserScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToMenu: () -> Unit,
-    onNavigateToMap: () -> Unit,
+    onNavigateToMap: (String?) -> Unit,
     onNavigateToOrders: () -> Unit,
     onNavigateToReviews: () -> Unit,
     onNavigateToSaved: () -> Unit,
@@ -164,7 +164,7 @@ fun UserScreen(
                     icon = { Icon(Icons.Default.Place, contentDescription = "Map") },
                     label = { Text("MAP") },
                     selected = false,
-                    onClick = onNavigateToMap
+                    onClick = { onNavigateToMap(null) }
                 )
             }
         }

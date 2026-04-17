@@ -13,6 +13,7 @@ data class Post(
     val userId: String = "",
     val restaurantName: String = "",
     val restaurantId: String = "",
+    val profilePhoto: String = "",
     val description: String = "",
     val photoUrl: String = "",
     val likesCount: Long = 0,
@@ -41,14 +42,21 @@ class PostRepository {
                 .get()
                 .await()
             
-            snapshot.documents.mapNotNull { doc ->
-                val post = doc.toObject(Post::class.java)?.copy(id = doc.id)
-                if (post != null && currentUserId != null) {
-                    val likeDoc = db.collection("posts").document(doc.id)
+            // Map the documents to Post objects first
+            val basePosts = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Post::class.java)?.copy(id = doc.id)
+            }
+
+            // If user is not logged in, return posts without like status
+            if (currentUserId == null) return basePosts
+
+            basePosts.map { post ->
+                try {
+                    val likeDoc = db.collection("posts").document(post.id)
                         .collection("likes").document(currentUserId).get().await()
                     post.copy(isLiked = likeDoc.exists())
-                } else {
-                    post
+                } catch (e: Exception) {
+                    post // If like check fails, assume not liked
                 }
             }
         } catch (e: Exception) {
