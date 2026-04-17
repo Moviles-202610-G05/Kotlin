@@ -7,8 +7,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -51,19 +49,14 @@ fun ForgotPasswordScreen(
 
         // --- Header estado ---
         Column(modifier = Modifier.fillMaxWidth()) {
-            val (title, subtitle) = when (viewModel.step) {
-                1 -> "Forgot Password?" to "Enter your email to receive a recovery code."
-                2 -> "Check your Email" to "We've sent a recovery code to your email address."
-                else -> "New Password" to "Set a new password for your account."
-            }
             Text(
-                text = title,
+                text = "Forgot Password?",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1C1E)
             )
             Text(
-                text = subtitle,
+                text = "Enter your email to receive a password reset link.",
                 color = Color.Gray,
                 fontSize = 16.sp
             )
@@ -71,59 +64,29 @@ fun ForgotPasswordScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Mensaje de error si existe
-        // ---
-        viewModel.errorMessage?.let {
+        // --- Mensaje de estado/éxito ---
+        viewModel.statusMessage?.let {
             Text(
                 text = it,
-                color = MaterialTheme.colorScheme.error,
+                color = Color(0xFF4CAF50), // Success Green
                 modifier = Modifier.padding(vertical = 8.dp)
             )
         }
 
         // --- Inputs ---
-        when (viewModel.step) {
-            1 -> {
-                CustomTextField(
-                    value = viewModel.email,
-                    onValueChange = { viewModel.email = it },
-                    label = "Email Address",
-                    placeholder = "Enter your registered email",
-                    leadingIcon = Icons.Default.Email
-                )
-            }
-            2 -> {
-                CustomTextField(
-                    value = viewModel.recoveryCode,
-                    onValueChange = { viewModel.recoveryCode = it },
-                    label = "Recovery Code",
-                    placeholder = "Enter the 6-digit code",
-                    leadingIcon = Icons.Default.Pin
-                )
-            }
-            3 -> {
-                CustomTextField(
-                    value = viewModel.newPassword,
-                    onValueChange = { viewModel.newPassword = it },
-                    label = "New Password",
-                    placeholder = "Enter at least 6 characters",
-                    leadingIcon = Icons.Default.Lock,
-                    isPassword = true
-                )
-            }
-        }
+        CustomTextField(
+            value = viewModel.email,
+            onValueChange = { viewModel.onEmailChange(it) },
+            label = "Email Address",
+            placeholder = "Enter your registered email",
+            leadingIcon = Icons.Default.Email
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         // --- Botones ---
         Button(
-            onClick = {
-                when (viewModel.step) {
-                    1 -> viewModel.sendRecoveryRequest()
-                    2 -> viewModel.verifyCode()
-                    3 -> viewModel.updatePassword(onResetSuccess)
-                }
-            },
+            onClick = { viewModel.sendRecoveryRequest() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -134,12 +97,14 @@ fun ForgotPasswordScreen(
             if (viewModel.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
-                val buttonText = when (viewModel.step) {
-                    1 -> "Send Code"
-                    2 -> "Verify Code"
-                    else -> "Reset Password"
-                }
-                Text(buttonText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Send Reset Link", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        if (viewModel.step == 2) {
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onBackClick) {
+                Text("Return to Login", color = OrangeFoodGram)
             }
         }
     }

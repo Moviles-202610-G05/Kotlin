@@ -20,7 +20,7 @@ interface OpenRouterApi {
 }
 
 data class OpenRouterRequest(
-    val model: String = "nvidia/nemotron-nano-12b-v2-vl:free",
+    val model: String = "google/gemini-2.0-flash-001",
     val messages: List<Message>
 )
 
