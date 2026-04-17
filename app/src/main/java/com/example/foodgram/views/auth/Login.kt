@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -62,12 +63,14 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         // Error Message
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+        Box(modifier = Modifier.height(40.dp)) {
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
         }
 
         // Input Fields
@@ -162,6 +165,8 @@ fun CustomTextField(
     leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
     isPassword: Boolean = false
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(text = label, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
         OutlinedTextField(
@@ -170,11 +175,19 @@ fun CustomTextField(
             placeholder = { Text(placeholder) },
             leadingIcon = { Icon(leadingIcon, contentDescription = null, tint = Color.LightGray) },
             trailingIcon = {
-                if (isPassword) Icon(Icons.Default.Visibility, contentDescription = null, tint = Color.LightGray)
+                if (isPassword) {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            tint = Color.LightGray
+                        )
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+            visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color(0xFFF3F4F6),
                 focusedBorderColor = Color(0xFFFF6F31)

@@ -20,11 +20,25 @@ class LoginViewModel : ViewModel() {
         private set
 
     fun onEmailChange(newValue: String) {
-        email = newValue
+        if (newValue.length < 25) {
+            if (newValue != email) {
+                email = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Email must be less than 25 characters"
+        }
     }
 
     fun onPasswordChange(newValue: String) {
-        password = newValue
+        if (newValue.length < 25) {
+            if (newValue != password) {
+                password = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Password must be less than 25 characters"
+        }
     }
 
     fun login(onSuccess: () -> Unit) {

@@ -96,11 +96,22 @@ fun RestaurantRegisterView(
             trackColor = Color(0xFFFFE0D4)
         )
 
+        // --- Error Message ---
+        Box(modifier = Modifier.height(40.dp)) {
+            viewModel.errorMessage?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+
         // --- Form Sections ---
         SectionHeader("OWNER DETAILS")
         CustomInputField(
             value = viewModel.ownerName,
-            onValueChange = { viewModel.ownerName = it },
+            onValueChange = { viewModel.onOwnerNameChange(it) },
             label = "Full Name of the owner",
             icon = Icons.Default.Person
         )
@@ -108,37 +119,37 @@ fun RestaurantRegisterView(
         SectionHeader("RESTAURANT DETAILS")
         CustomInputField(
             value = viewModel.restaurantName,
-            onValueChange = { viewModel.restaurantName = it },
+            onValueChange = { viewModel.onRestaurantNameChange(it) },
             label = "Restaurant Name",
             icon = Icons.Default.Storefront
         )
         CustomInputField(
             value = viewModel.email,
-            onValueChange = { viewModel.email = it },
+            onValueChange = { viewModel.onEmailChange(it) },
             label = "Business Email",
             icon = Icons.Default.Email
         )
         CustomInputField(
             value = viewModel.phone,
-            onValueChange = { viewModel.phone = it },
+            onValueChange = { viewModel.onPhoneChange(it) },
             label = "Phone Number",
             icon = Icons.Default.Phone
         )
         CustomInputField(
             value = viewModel.address,
-            onValueChange = { viewModel.address = it },
+            onValueChange = { viewModel.onAddressChange(it) },
             label = "Address",
             icon = Icons.Default.LocationOn
         )
         CustomInputField(
             value = viewModel.username,
-            onValueChange = { viewModel.username = it },
+            onValueChange = { viewModel.onUsernameChange(it) },
             label = "Username",
             icon = Icons.Default.AlternateEmail
         )
         CustomInputField(
             value = viewModel.password,
-            onValueChange = { viewModel.password = it },
+            onValueChange = { viewModel.onPasswordChange(it) },
             label = "Password",
             icon = Icons.Default.Lock,
             isPassword = true
@@ -200,6 +211,8 @@ fun CustomInputField(
     icon: ImageVector,
     isPassword: Boolean = false
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -216,14 +229,16 @@ fun CustomInputField(
         },
         trailingIcon = {
             if (isPassword) {
-                Icon(
-                    imageVector = Icons.Default.Visibility,
-                    contentDescription = null,
-                    tint = Color.Gray.copy(alpha = 0.6f)
-                )
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                        tint = Color.Gray.copy(alpha = 0.6f)
+                    )
+                }
             }
         },
-        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
         shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
             unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),

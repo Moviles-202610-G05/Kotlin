@@ -28,13 +28,93 @@ class RestaurantRegisterViewModel : ViewModel() {
     var priceRange by mutableStateOf("$$")
     var restaurantImageUri by mutableStateOf<Uri?>(null)
 
+    fun onOwnerNameChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != ownerName) {
+                ownerName = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Owner name must be less than 25 characters"
+        }
+    }
+
+    fun onRestaurantNameChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != restaurantName) {
+                restaurantName = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Restaurant name must be less than 25 characters"
+        }
+    }
+
+    fun onEmailChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != email) {
+                email = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Email must be less than 25 characters"
+        }
+    }
+
+    fun onPhoneChange(newValue: String) {
+        if (newValue.all { it.isDigit() }) {
+            if (newValue.length <= 10) {
+                if (newValue != phone) {
+                    phone = newValue
+                    errorMessage = null
+                }
+            } else {
+                errorMessage = "Phone number must be 10 characters"
+            }
+        } else {
+            errorMessage = "Phone number must only contain numbers"
+        }
+    }
+
+    fun onAddressChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != address) {
+                address = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Address must be less than 25 characters"
+        }
+    }
+
+    fun onUsernameChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != username) {
+                username = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Username must be less than 25 characters"
+        }
+    }
+
+    fun onPasswordChange(newValue: String) {
+        if (newValue.length < 25) {
+            if (newValue != password) {
+                password = newValue
+                errorMessage = null
+            }
+        } else {
+            errorMessage = "Password must be less than 25 characters"
+        }
+    }
+
     // --- Menu State ---
     val menuItems = mutableStateListOf<MenuItem>()
 
     var isLoading by mutableStateOf(false)
         private set
     var errorMessage by mutableStateOf<String?>(null)
-        private set
 
     fun finishRegistration(onSuccess: () -> Unit) {
         if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {

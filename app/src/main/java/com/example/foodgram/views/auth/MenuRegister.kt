@@ -115,12 +115,14 @@ fun MenuRegisterView(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Error Message
-        viewModel.errorMessage?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+        Box(modifier = Modifier.height(40.dp)) {
+            viewModel.errorMessage?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
         }
 
         // --- Dish Photo ---
@@ -142,7 +144,16 @@ fun MenuRegisterView(
         Text("Dish Name", modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         OutlinedTextField(
             value = dishName,
-            onValueChange = { dishName = it },
+            onValueChange = { 
+                if (it.length < 25) {
+                    if (it != dishName) {
+                        dishName = it
+                        viewModel.errorMessage = null
+                    }
+                } else {
+                    viewModel.errorMessage = "Dish name must be less than 25 characters"
+                }
+            },
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             placeholder = { Text("e.g. Truffle Mushroom Pasta", color = Color.Gray) },
             shape = RoundedCornerShape(28.dp),
@@ -157,7 +168,16 @@ fun MenuRegisterView(
                 Text("Price ($)", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 OutlinedTextField(
                     value = price,
-                    onValueChange = { price = it },
+                    onValueChange = { 
+                        if (it.matches(Regex("""^\d{0,2}(\.\d{0,2})?$"""))) {
+                            if (it != price) {
+                                price = it
+                                viewModel.errorMessage = null
+                            }
+                        } else {
+                            viewModel.errorMessage = "Price must be in 00.00 format"
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     placeholder = { Text("15.00", color = Color.Gray) },
                     shape = RoundedCornerShape(28.dp),
@@ -177,7 +197,16 @@ fun MenuRegisterView(
         Text("Description", modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold, fontSize = 14.sp)
         OutlinedTextField(
             value = description,
-            onValueChange = { description = it },
+            onValueChange = { 
+                if (it.length <= 100) {
+                    if (it != description) {
+                        description = it
+                        viewModel.errorMessage = null
+                    }
+                } else {
+                    viewModel.errorMessage = "Description must be less than 100 characters"
+                }
+            },
             modifier = Modifier.fillMaxWidth().height(120.dp).padding(vertical = 4.dp),
             placeholder = { Text("Describe the ingredients, taste, and preparation method...", color = Color.Gray) },
             shape = RoundedCornerShape(24.dp),
