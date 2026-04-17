@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,12 +17,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foodgram.ui.theme.OrangeFoodGram
+import com.example.foodgram.viewmodels.auth.LoginViewModel
 
 @Composable
-fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+fun LoginScreen(
+    onNavigateToHome: () -> Unit,
+    onNavigateToSignUp: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
+    viewModel: LoginViewModel = viewModel()
+) {
+    val email = viewModel.form.email
+    val password = viewModel.form.password
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
 
     Column(
         modifier = Modifier
@@ -52,10 +62,21 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        // Error Message
+        Box(modifier = Modifier.height(40.dp)) {
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+
         // Input Fields
         CustomTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { viewModel.onEmailChange(it) },
             label = "Email Address",
             placeholder = "Enter your email",
             leadingIcon = Icons.Default.Email
@@ -65,7 +86,7 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         CustomTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { viewModel.onPasswordChange(it) },
             label = "Password",
             placeholder = "Enter your password",
             leadingIcon = Icons.Default.Lock,
@@ -74,7 +95,7 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         // Forgot Password
         TextButton(
-            onClick = { /* TODO */ },
+            onClick = { onNavigateToForgotPassword() },
             modifier = Modifier.align(Alignment.End)
         ) {
             Text("Forgot Password?", color = OrangeFoodGram)
@@ -84,14 +105,21 @@ fun LoginScreen(onNavigateToHome: () -> Unit,onNavigateToSignUp: () -> Unit) {
 
         // Login Button
         Button(
-            onClick = onNavigateToHome,
+            onClick = {
+                viewModel.login(onSuccess = onNavigateToHome)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = OrangeFoodGram),
-            shape = RoundedCornerShape(28.dp)
+            shape = RoundedCornerShape(28.dp),
+            enabled = !isLoading
         ) {
-            Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -137,6 +165,8 @@ fun CustomTextField(
     leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
     isPassword: Boolean = false
 ) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(text = label, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
         OutlinedTextField(
@@ -145,11 +175,19 @@ fun CustomTextField(
             placeholder = { Text(placeholder) },
             leadingIcon = { Icon(leadingIcon, contentDescription = null, tint = Color.LightGray) },
             trailingIcon = {
-                if (isPassword) Icon(Icons.Default.Visibility, contentDescription = null, tint = Color.LightGray)
+                if (isPassword) {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                            tint = Color.LightGray
+                        )
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+            visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color(0xFFF3F4F6),
                 focusedBorderColor = Color(0xFFFF6F31)

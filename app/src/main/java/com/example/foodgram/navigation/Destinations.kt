@@ -6,6 +6,9 @@ import kotlinx.serialization.Serializable
 object Home
 
 @Serializable
+data class RestaurantDetail(val id: String)
+
+@Serializable
 object Search
 
 @Serializable
@@ -15,7 +18,7 @@ object Profile
 object Menu
 
 @Serializable
-object RestaurantsMap
+data class RestaurantsMap(val restaurantId: String? = null)
 
 @Serializable
 object Map
@@ -25,15 +28,27 @@ object Login
 
 @Serializable
 object SignUp
+
 @Serializable
 object Register
 
+@Serializable
+object StudentRegister
 
 @Serializable
 object RestaurantRegister
+
+@Serializable
+object MenuRegister
 
 @Serializable
 object MainFeed
 
 @Serializable
 object PersonalInfo
+
+@Serializable
+object ForgotPassword
+
+@Serializable
+object NutritionGoals

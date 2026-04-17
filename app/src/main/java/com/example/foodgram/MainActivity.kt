@@ -8,20 +8,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.foodgram.navigation.*
 import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.feed.HomeScreen
+import com.example.foodgram.views.restaurants.MapScreen
+import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
 import com.example.foodgram.views.auth.LoginScreen
 import com.example.foodgram.views.auth.RegistrationTypeView
-import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
-import com.example.foodgram.navigation.Login
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
 import com.example.foodgram.views.profile.UserScreen
 import com.example.foodgram.views.settings.PersonalInfoSettings
+import com.example.foodgram.views.auth.MenuRegisterView
+import com.example.foodgram.views.auth.StudentRegisterScreen
+import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
+import com.example.foodgram.views.auth.ForgotPasswordScreen
+import com.example.foodgram.views.settings.NutritionGoalsScreen
+import com.example.foodgram.views.tracker.TrackerScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -31,6 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             FoodGramTheme {
                 val navController = rememberNavController()
+                val restaurantViewModel: RestaurantRegisterViewModel = viewModel()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
@@ -41,72 +50,153 @@ class MainActivity : ComponentActivity() {
                         composable<Login> {
                             LoginScreen(
                                 onNavigateToHome = { navController.navigate(Home) },
-                                onNavigateToSignUp = { navController.navigate(Register) })
+                                onNavigateToSignUp = { navController.navigate(Register) },
+                                onNavigateToForgotPassword = { navController.navigate(ForgotPassword) }
+                            )
                         }
-                            composable<Register> {
-                                RegistrationTypeView(
-                                    onBackClick = { navController.navigateUp() },
-                                    onLoginClick = { navController.navigate(Home) },
-                                    onContinueClick = { type ->
-                                        if (type == AccountType.OWNER) {
-                                            navController.navigate(RestaurantRegister)
-                                        } else {
-                                            // Handle Student registration or other types
-                                            navController.navigate(Home)
+                        composable<ForgotPassword> {
+                            ForgotPasswordScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onResetSuccess = { 
+                                    navController.navigate(Login) {
+                                        popUpTo(ForgotPassword) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+                        composable<Register> {
+                            RegistrationTypeView(
+                                onBackClick = { navController.navigateUp() },
+                                onLoginClick = { 
+                                    navController.navigate(Login) {
+                                        popUpTo(Login) { inclusive = true }
+                                    }
+                                },
+                                onContinueClick = { type ->
+                                    if (type == AccountType.OWNER) {
+                                        navController.navigate(RestaurantRegister)
+                                    } else {
+                                        navController.navigate(StudentRegister)
+                                    }
+                                }
+                            )
+                        }
+                        composable<StudentRegister> {
+                            StudentRegisterScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onRegisterSuccess = {
+                                    navController.navigate(Home) {
+                                        popUpTo(Login) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+                        composable<RestaurantRegister> {
+                            RestaurantRegisterView(
+                                viewModel = restaurantViewModel,
+                                onBackClick = { navController.navigateUp() },
+                                onAddMenuClick = { navController.navigate(MenuRegister) }
+                            )
+                        }
+                        
+                        composable<MenuRegister> {
+                            MenuRegisterView(
+                                viewModel = restaurantViewModel,
+                                onBackClick = { navController.navigateUp() },
+                                onFinishClick = { 
+                                    restaurantViewModel.finishRegistration {
+                                        navController.navigate(Home) {
+                                            popUpTo(Login) { inclusive = true }
                                         }
                                     }
-                                )
-                            }
-                            composable<RestaurantRegister> {
-                                RestaurantRegisterView()
-                            }
+                                }
+                            )
+                        }
 
-                            composable<Home> {
-                                HomeScreen(
-                                    onNavigateToSearch = { navController.navigate(Search) },
-                                    onNavigateToProfile = { navController.navigate(Profile) },
-                                    onNavigateToMenu = { navController.navigate(Menu) },
-                                    onNavigateToMap = { navController.navigate(RestaurantsMap) }
-                                )
-                            }
+                        composable<Home> {
+                            HomeScreen(
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
+                                onNavigateToRestaurantDetail = { id -> 
+                                    navController.navigate(RestaurantDetail(id))
+                                }
+                            )
+                        }
 
-                            composable<Search> {
-                                SearchRestaurantsScreen(
-                                    onNavigateToFeed = { navController.navigate(Home) },
-                                    onNavigateToProfile = { navController.navigate(Profile) },
-                                    onNavigateToMenu = { navController.navigate(Menu) },
-                                    onNavigateToMap = { navController.navigate(RestaurantsMap) }
-                                )
-                            }
+                        composable<RestaurantDetail> { backStackEntry ->
+                            val detail: RestaurantDetail = backStackEntry.toRoute()
+                            com.example.foodgram.views.restaurants.RestaurantDetailScreen(
+                                restaurantId = detail.id,
+                                onNavigateBack = { navController.navigateUp() },
+                                onNavigateToFeed = { navController.navigate(Home) },
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) }
+                            )
+                        }
 
-                            composable<Profile> {
-                                UserScreen(
-                                    navController = navController,
-                                    onNavigateToHome = { navController.navigate(Home) },
-                                    onNavigateToSearch = { navController.navigate(Search) },
-                                    onNavigateToMenu = { navController.navigate(Menu) },
-                                    onNavigateToMap = { navController.navigate(RestaurantsMap) },
-                                    onNavigateToOrders = { /* TODO */ },
-                                    onNavigateToReviews = { /* TODO */ },
-                                    onNavigateToSaved = { /* TODO */ },
-                                    onNavigateToNutritionGoals = { /* TODO */ },
-                                    onNavigateToPrivacySettings = { /* TODO */ },
-                                    onLogout = {
-                                        navController.navigate(Login) {
-                                            popUpTo(0) { inclusive = true }
-                                        }
+                        composable<Search> {
+                            SearchRestaurantsScreen(
+                                onNavigateToFeed = { navController.navigate(Home) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
+                                onNavigateToRestaurantDetail = { id ->
+                                    navController.navigate(RestaurantDetail(id))
+                                }
+                            )
+                        }
+
+                        composable<Profile> {
+                            UserScreen(
+                                navController = navController,
+                                onNavigateToHome = { navController.navigate(Home) },
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
+                                onNavigateToOrders = { /* TODO */ },
+                                onNavigateToReviews = { /* TODO */ },
+                                onNavigateToSaved = { /* TODO */ },
+                                onNavigateToNutritionGoals = { navController.navigate(NutritionGoals) },
+                                onNavigateToPrivacySettings = { /* TODO */ },
+                                onLogout = {
+                                    navController.navigate(Login) {
+                                        popUpTo(0) { inclusive = true }
                                     }
-                                )
-                            }
-                            composable<PersonalInfo> {
-                                    PersonalInfoSettings(navController = navController)
-                            }
-                            composable<Menu> { /* TODO */ }
-                            composable<RestaurantsMap> { /* TODO */ }
+                                }
+                            )
+                        }
+                        composable<PersonalInfo> {
+                                PersonalInfoSettings(navController = navController)
+                        }
+                        composable<NutritionGoals> {
+                            NutritionGoalsScreen(navController = navController)
+                        }
+                        composable<Menu> {
+                            TrackerScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onSaveSuccess = { navController.navigate(Home) }
+                            )
+                        }
+                        composable<RestaurantsMap> { backStackEntry ->
+                            val mapRoute: RestaurantsMap = backStackEntry.toRoute()
+                            MapScreen(
+                                restaurantId = mapRoute.restaurantId,
+                                onNavigateToFeed = { navController.navigate(Home) },
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToRestaurantDetail = { id ->
+                                    navController.navigate(RestaurantDetail(id))
+                                }
+                            )
                         }
                     }
                 }
             }
         }
     }
-
+}

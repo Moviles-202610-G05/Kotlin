@@ -1,6 +1,7 @@
 package com.example.foodgram.views.restaurants
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,17 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.foodgram.ui.theme.FoodGramOrange
 
-data class Restaurant(
-    val id: Int,
-    val name: String,
-    val rating: String,
-    val reviews: String,
-    val description: String,
-    val time: String,
-    val distance: String,
-    val priceRange: String,
-    val tag: String? = null
-)
+import com.example.foodgram.models.auth.Restaurant
 
 val recommendedRestaurants = listOf(
     "Oasis Garden" to "4.9",
@@ -39,9 +30,39 @@ val recommendedRestaurants = listOf(
 )
 
 val restaurants = listOf(
-    Restaurant(1, "La Trattoria Milano", "4.8", "2.4k", "Authentic wood-fired pizzas, handmade tagliatelle, and traditional tiramisu in an intimat...", "25-35 min", "1.2 km", "$$$", "TOP RATED"),
-    Restaurant(2, "The Prime Grill", "4.6", "1.8k", "Premium dry-aged steaks and an extensive wine cellar. Experience elevated American...", "40-50 min", "2.8 km", "$$$$", null),
-    Restaurant(3, "Sakura Zen Sushi", "4.9", "950", "Masterfully crafted omakase experience with fish flown in daily from Tsukiji Market. Pure zen i...", "30-45 min", "1.5 km", "$$$", "NEW FAVORITE")
+    Restaurant(
+        id = "1",
+        name = "La Trattoria Milano",
+        rating = 4.8,
+        nuberReviews = 2400,
+        description = "Authentic wood-fired pizzas, handmade tagliatelle, and traditional tiramisu in an intimat...",
+        time = "25-35 min",
+        distance = "1.2 km",
+        price = "$$$",
+        badge = "TOP RATED"
+    ),
+    Restaurant(
+        id = "2",
+        name = "The Prime Grill",
+        rating = 4.6,
+        nuberReviews = 1800,
+        description = "Premium dry-aged steaks and an extensive wine cellar. Experience elevated American...",
+        time = "40-50 min",
+        distance = "2.8 km",
+        price = "$$$$",
+        badge = ""
+    ),
+    Restaurant(
+        id = "3",
+        name = "Sakura Zen Sushi",
+        rating = 4.9,
+        nuberReviews = 950,
+        description = "Masterfully crafted omakase experience with fish flown in daily from Tsukiji Market. Pure zen i...",
+        time = "30-45 min",
+        distance = "1.5 km",
+        price = "$$$",
+        badge = "NEW FAVORITE"
+    )
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,7 +71,8 @@ fun SearchRestaurantsScreen(
     onNavigateToFeed: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {}
+    onNavigateToMap: (String?) -> Unit = {},
+    onNavigateToRestaurantDetail: (String) -> Unit = {}
 ) {
     Scaffold(
         bottomBar = {
@@ -58,8 +80,8 @@ fun SearchRestaurantsScreen(
                 NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, label = { Text("FEED") })
                 NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Search, contentDescription = null) }, label = { Text("SEARCH") })
                 NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, contentDescription = null) }, label = { Text("PROFILE") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Menu, contentDescription = null) }, label = { Text("Menu") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMap, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
+                NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Camera, contentDescription = null) }, label = { Text("SCAN") })
+                NavigationBarItem(selected = false, onClick = { onNavigateToMap(null) }, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
             }
         }
     ) { innerPadding ->
@@ -140,7 +162,10 @@ fun SearchRestaurantsScreen(
 
             // Restaurant List
             items(restaurants) { restaurant ->
-                RestaurantListItem(restaurant)
+                RestaurantListItem(
+                    restaurant = restaurant,
+                    onRestaurantClick = { onNavigateToRestaurantDetail(restaurant.id.toString()) }
+                )
             }
         }
     }
@@ -161,9 +186,9 @@ fun RecommendedCard(name: String, rating: String) {
 }
 
 @Composable
-fun RestaurantListItem(restaurant: Restaurant) {
+fun RestaurantListItem(restaurant: Restaurant, onRestaurantClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().clickable { onRestaurantClick() },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -175,8 +200,8 @@ fun RestaurantListItem(restaurant: Restaurant) {
                     Surface(color = Color.White.copy(alpha = 0.9f), shape = RoundedCornerShape(12.dp)) {
                         Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Star, contentDescription = null, tint = FoodGramOrange, modifier = Modifier.size(14.dp))
-                            Text(restaurant.rating, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Text(" (${restaurant.reviews})", color = Color.Gray, fontSize = 11.sp)
+                            Text(restaurant.rating.toString(), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(" (${restaurant.nuberReviews})", color = Color.Gray, fontSize = 11.sp)
                         }
                     }
                 }
@@ -184,9 +209,9 @@ fun RestaurantListItem(restaurant: Restaurant) {
                     Icon(Icons.Outlined.FavoriteBorder, contentDescription = null, tint = Color.White)
                 }
 
-                restaurant.tag?.let {
+                if (restaurant.badge.isNotEmpty()) {
                     Surface(color = FoodGramOrange, shape = RoundedCornerShape(12.dp), modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)) {
-                        Text(it, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                        Text(restaurant.badge, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                     }
                 }
             }
@@ -194,7 +219,7 @@ fun RestaurantListItem(restaurant: Restaurant) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(restaurant.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(restaurant.priceRange, color = FoodGramOrange, fontWeight = FontWeight.Bold)
+                    Text(restaurant.price, color = FoodGramOrange, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(restaurant.description, color = Color.Gray, fontSize = 13.sp, lineHeight = 18.sp)

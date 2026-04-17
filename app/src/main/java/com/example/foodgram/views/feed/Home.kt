@@ -1,6 +1,7 @@
 package com.example.foodgram.views.feed
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,7 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,23 +20,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.foodgram.ui.theme.FoodGramOrange
+import com.example.foodgram.viewmodels.feed.FeedViewModel
+import com.example.foodgram.models.feed.Post
+import java.text.SimpleDateFormat
+import java.util.*
 
-// Dummy data for the prototype
-data class Post(
-    val id: Int,
-    val username: String,
-    val location: String,
-    val time: String,
-    val caption: String,
-    val likes: String,
-    val comments: Int
-)
-
-val dummyPosts = listOf(
-    Post(1, "ChefMario", "La Tarta Milano", "2h ago", "The best truffle pasta I've had in the city!", "1,234", 88),
-    Post(2, "SushiLover", "Oishii Sushi Bar", "5h ago", "Fresh catch from this morning. You can really taste the difference.", "856", 42)
-)
+fun formatTimestamp(timestamp: com.google.firebase.Timestamp?): String {
+    if (timestamp == null) return ""
+    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    return sdf.format(timestamp.toDate())
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,8 +40,12 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
     onNavigateToMenu: () -> Unit = {},
-    onNavigateToMap: () -> Unit = {}
+    onNavigateToMap: (String?) -> Unit = {},
+    onNavigateToRestaurantDetail: (String) -> Unit = {},
+    viewModel: FeedViewModel = viewModel()
 ) {
+    var showCommentDialog by remember { mutableStateOf<Post?>(null) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,12 +99,12 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = false,
                     onClick = onNavigateToMenu,
-                    icon = { Icon(Icons.Default.Menu, contentDescription = "Menu") },
-                    label = { Text("Menu") }
+                    icon = { Icon(Icons.Default.Camera, contentDescription = "Scan") },
+                    label = { Text("SCAN") }
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = onNavigateToMap,
+                    onClick = { onNavigateToMap(null) },
                     icon = { Icon(Icons.Default.Place, contentDescription = "Map") },
                     label = { Text("MAP") }
                 )
@@ -120,21 +121,82 @@ fun HomeScreen(
             }
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .background(Color.White)
-        ) {
-            items(dummyPosts) { post ->
-                PostItem(post)
+        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = FoodGramOrange)
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                ) {
+                    items(viewModel.posts) { post ->
+                        PostItem(
+                            post = post,
+                            onLikeClick = { viewModel.toggleLike(post) },
+                            onCommentClick = { showCommentDialog = post },
+                            onRestaurantClick = { onNavigateToRestaurantDetail(post.restaurantId) }
+                        )
+                    }
+                }
+            }
+
+            if (showCommentDialog != null) {
+                CommentDialog(
+                    post = showCommentDialog!!,
+                    onDismiss = { showCommentDialog = null },
+                    onSendComment = { text ->
+                        viewModel.addComment(showCommentDialog!!.id, text)
+                        showCommentDialog = null
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-fun PostItem(post: Post) {
+fun CommentDialog(
+    post: Post,
+    onDismiss: () -> Unit,
+    onSendComment: (String) -> Unit
+) {
+    var commentText by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Comment") },
+        text = {
+            TextField(
+                value = commentText,
+                onValueChange = { commentText = it },
+                placeholder = { Text("Write a comment...") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (commentText.isNotBlank()) onSendComment(commentText) },
+                enabled = commentText.isNotBlank()
+            ) {
+                Text("Post", color = FoodGramOrange)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
+    )
+}
+
+@Composable
+fun PostItem(
+    post: Post,
+    onLikeClick: () -> Unit,
+    onCommentClick: () -> Unit,
+    onRestaurantClick: () -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Header
         Row(
@@ -143,75 +205,107 @@ fun PostItem(post: Post) {
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray)
-            )
+            if (!post.profilePhoto.isNullOrEmpty()) {
+                AsyncImage(
+                    model = post.profilePhoto,
+                    contentDescription = "Profile Photo",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF0F0F0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Default Avatar",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(12.dp))
-            Column {
+            Column(modifier = Modifier.clickable { onRestaurantClick() }) {
                 Text(post.username, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                Text("${post.location} • ${post.time}", color = Color.Gray, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${post.restaurantName} • ${formatTimestamp(post.createdAt)}",
+                        color = Color.Gray,
+                        fontSize = 12.sp
+                    )
+                }
             }
             Spacer(modifier = Modifier.weight(1f))
             Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color.Gray)
         }
 
-        // Image Placeholder
-        Box(
+        // Image
+        AsyncImage(
+            model = post.photoUrl,
+            contentDescription = "Post image",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(400.dp)
-                .background(Color(0xFFEEEEEE)),
-            contentAlignment = Alignment.BottomStart
-        ) {
-            // Location tag on image
-            Surface(
-                color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(post.location, color = Color.White, fontSize = 10.sp)
-                }
-            }
-        }
+                .background(Color(0xFFEEEEEE))
+                .clickable { onRestaurantClick() },
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+        )
 
         // Actions
         Row(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
-            IconButton(onClick = { }) { Icon(Icons.Default.FavoriteBorder, contentDescription = null) }
-            Text(post.likes, modifier = Modifier.align(Alignment.CenterVertically), fontWeight = FontWeight.Bold)
-            IconButton(onClick = { }) { Icon(Icons.Default.Email, contentDescription = null) }
-            Text("${post.comments}", modifier = Modifier.align(Alignment.CenterVertically), fontWeight = FontWeight.Bold)
+            IconButton(onClick = onLikeClick) {
+                Icon(
+                    imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Like",
+                    tint = if (post.isLiked) Color.Red else Color.Black
+                )
+            }
+            Text("${post.likesCount}", modifier = Modifier.align(Alignment.CenterVertically), fontWeight = FontWeight.Bold)
+            
+            IconButton(onClick = onCommentClick) {
+                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Comment")
+            }
+            Text("${post.commentsCount}", modifier = Modifier.align(Alignment.CenterVertically), fontWeight = FontWeight.Bold)
+            
             IconButton(onClick = { }) { Icon(Icons.Default.Share, contentDescription = null) }
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { }) { Icon(Icons.Default.Star, contentDescription = null) }
+            IconButton(onClick = { }) { Icon(Icons.Default.StarBorder, contentDescription = null) }
         }
 
         // Caption
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(
-                text = "${post.username}  ${post.caption}",
+                text = "${post.username}  ${post.description}",
                 fontSize = 14.sp,
                 lineHeight = 18.sp
             )
-            Text(
-                text = "#foodie #truffle #pasta #delish",
-                color = FoodGramOrange,
-                fontSize = 14.sp
-            )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "View all ${post.comments} comments",
-                color = Color.LightGray,
-                fontSize = 12.sp
-            )
+            if (post.commentsCount > 0) {
+                TextButton(
+                    onClick = onCommentClick,
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.height(24.dp)
+                ) {
+                    Text(
+                        text = "View all ${post.commentsCount} comments",
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
+                }
+            }
         }
         Spacer(modifier = Modifier.height(16.dp))
     }
