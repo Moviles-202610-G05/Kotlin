@@ -29,6 +29,7 @@ import com.example.foodgram.views.auth.StudentRegisterScreen
 import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
 import com.example.foodgram.views.auth.ForgotPasswordScreen
 import com.example.foodgram.views.settings.NutritionGoalsScreen
+import com.example.foodgram.views.tracker.TrackerScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -174,7 +175,12 @@ class MainActivity : ComponentActivity() {
                         composable<NutritionGoals> {
                             NutritionGoalsScreen(navController = navController)
                         }
-                        composable<Menu> { /* TODO */ }
+                        composable<Menu> {
+                            TrackerScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onSaveSuccess = { navController.navigate(Home) }
+                            )
+                        }
                         composable<RestaurantsMap> { backStackEntry ->
                             val mapRoute: RestaurantsMap = backStackEntry.toRoute()
                             MapScreen(

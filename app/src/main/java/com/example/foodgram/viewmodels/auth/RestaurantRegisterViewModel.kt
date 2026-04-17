@@ -10,6 +10,10 @@ import com.example.foodgram.views.auth.MenuItem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.example.foodgram.models.ui.RestaurantRegisterForm
+import com.example.foodgram.models.auth.Restaurant
+import com.example.foodgram.models.auth.User
+import com.example.foodgram.models.auth.UserRole
 import com.example.foodgram.utils.UserSession
 import java.util.UUID
 
@@ -18,25 +22,15 @@ class RestaurantRegisterViewModel : ViewModel() {
     private val storage = FirebaseStorage.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    // --- Restaurant State ---
-    var ownerName by mutableStateOf("")
-    var restaurantName by mutableStateOf("")
-    var email by mutableStateOf("")
-    var phone by mutableStateOf("")
-    var address by mutableStateOf("")
-    var username by mutableStateOf("")
-    var password by mutableStateOf("")
-    var cuisineType by mutableStateOf("")
-    var description by mutableStateOf("")
-    var priceRange by mutableStateOf("$$")
-    var restaurantImageUri by mutableStateOf<Uri?>(null)
+    var form by mutableStateOf(RestaurantRegisterForm())
+        private set
+
+    val menuItems = mutableStateListOf<MenuItem>()
 
     fun onOwnerNameChange(newValue: String) {
         if (newValue.length < 25) {
-            if (newValue != ownerName) {
-                ownerName = newValue
-                errorMessage = null
-            }
+                form = form.copy(ownerName = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Owner name must be less than 25 characters"
         }
@@ -44,10 +38,8 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun onRestaurantNameChange(newValue: String) {
         if (newValue.length < 25) {
-            if (newValue != restaurantName) {
-                restaurantName = newValue
-                errorMessage = null
-            }
+            form = form.copy(restaurantName = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Restaurant name must be less than 25 characters"
         }
@@ -55,10 +47,8 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun onEmailChange(newValue: String) {
         if (newValue.length < 35) {
-            if (newValue != email) {
-                email = newValue
-                errorMessage = null
-            }
+            form = form.copy(email = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Email must be less than 35 characters"
         }
@@ -67,10 +57,8 @@ class RestaurantRegisterViewModel : ViewModel() {
     fun onPhoneChange(newValue: String) {
         if (newValue.all { it.isDigit() }) {
             if (newValue.length <= 10) {
-                if (newValue != phone) {
-                    phone = newValue
-                    errorMessage = null
-                }
+                form = form.copy(phone = newValue)
+                errorMessage = null
             } else {
                 errorMessage = "Phone number must be 10 characters"
             }
@@ -81,10 +69,8 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun onAddressChange(newValue: String) {
         if (newValue.length < 25) {
-            if (newValue != address) {
-                address = newValue
-                errorMessage = null
-            }
+            form = form.copy(address = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Address must be less than 25 characters"
         }
@@ -92,10 +78,8 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun onUsernameChange(newValue: String) {
         if (newValue.length < 25) {
-            if (newValue != username) {
-                username = newValue
-                errorMessage = null
-            }
+            form = form.copy(username = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Username must be less than 25 characters"
         }
@@ -103,24 +87,27 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun onPasswordChange(newValue: String) {
         if (newValue.length < 25) {
-            if (newValue != password) {
-                password = newValue
-                errorMessage = null
-            }
+            form = form.copy(password = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Password must be less than 25 characters"
         }
     }
 
-    // --- Menu State ---
-    val menuItems = mutableStateListOf<MenuItem>()
+    fun onCuisineTypeChange(newValue: String) {
+        form = form.copy(cuisineType = newValue)
+    }
+
+    fun onRestaurantImageChange(newValue: Uri?) {
+        form = form.copy(restaurantImageUri = newValue)
+    }
 
     var isLoading by mutableStateOf(false)
         private set
     var errorMessage by mutableStateOf<String?>(null)
 
     fun finishRegistration(onSuccess: () -> Unit) {
-        if (restaurantName.isBlank() || username.isBlank() || password.isBlank()) {
+        if (form.restaurantName.isBlank() || form.username.isBlank() || form.password.isBlank()) {
             errorMessage = "Basic restaurant info is required"
             return
         }
@@ -129,7 +116,7 @@ class RestaurantRegisterViewModel : ViewModel() {
         errorMessage = null
 
         // 1. Upload Restaurant Image
-        uploadImage(restaurantImageUri, "restaurants") { restaurantImageUrl ->
+        uploadImage(form.restaurantImageUri, "restaurants") { restaurantImageUrl ->
             // 2. Upload all Menu Item Images
             uploadMenuItems(0, mutableListOf()) { menuWithUrls ->
                 // 3. Save Restaurant to Firestore
@@ -183,25 +170,18 @@ class RestaurantRegisterViewModel : ViewModel() {
     }
 
     private fun saveRestaurantToFirestore(imageUrl: String?, onComplete: () -> Unit) {
-        val restaurantData = hashMapOf(
-            "name" to restaurantName,
-            "cuisine" to cuisineType,
-            "description" to description,
-            "restaurantImage" to (imageUrl ?: ""),
-            "price" to priceRange,
-            "rating" to 5.0, // Default for new
-            "nuberReviews" to 0,
-            "distance" to "0 km", // Placeholder
-            "time" to "20-30 min", // Placeholder
-            "lat" to 4.60971, // Placeholder
-            "long" to -74.08175, // Placeholder
-            "spots" to 100,
-            "spotsA" to 100,
-            "badge" to "NEW",
-            "badge2" to "WELCOME"
+        val restaurant = Restaurant(
+            name = form.restaurantName,
+            cuisine = form.cuisineType,
+            description = form.description,
+            restaurantImage = imageUrl ?: "",
+            price = form.priceRange,
+            ownerEmail = form.email,
+            phone = form.phone,
+            address = form.address
         )
 
-        db.collection("restaurants").document(restaurantName).set(restaurantData)
+        db.collection("restaurants").document(form.restaurantName).set(restaurant)
             .addOnSuccessListener { onComplete() }
             .addOnFailureListener { 
                 errorMessage = "Firestore Error: ${it.localizedMessage}"
@@ -224,7 +204,7 @@ class RestaurantRegisterViewModel : ViewModel() {
                 "description" to item.description,
                 "category" to item.category,
                 "image" to (item.imageUri?.toString() ?: ""),
-                "restaurant" to restaurantName
+                "restaurant" to form.restaurantName
             )
             batch.set(docRef, data)
         }
@@ -239,22 +219,21 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     private fun saveOwnerUser(onSuccess: () -> Unit) {
         // 1. Create user in Firebase Auth
-        auth.createUserWithEmailAndPassword(email, password)
+        auth.createUserWithEmailAndPassword(form.email, form.password)
             .addOnSuccessListener { authResult ->
                 val uid = authResult.user?.uid
                 if (uid != null) {
-                    val userData = hashMapOf(
-                        "name" to ownerName,
-                        "username" to username,
-                        "email" to email,
-                        "password" to password,
-                        "roll" to "OWNER",
-                        "restaurant" to restaurantName,
-                        "uid" to uid
+                    val user = User(
+                        uid = uid,
+                        name = form.ownerName,
+                        username = form.username,
+                        email = form.email,
+                        roll = UserRole.RESTAURANTE,
+                        restaurantName = form.restaurantName
                     )
 
                     // 2. Save data to Firestore
-                    db.collection("user").add(userData)
+                    db.collection("user").add(user)
                         .addOnSuccessListener { documentReference ->
                             UserSession.currentUserDocId = documentReference.id
                             isLoading = false

@@ -155,8 +155,8 @@ fun UserScreen(
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = OrangeFoodGram)
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Menu, contentDescription = "Menu") },
-                    label = { Text("MENU") },
+                    icon = { Icon(Icons.Default.Camera, contentDescription = "Scan") },
+                    label = { Text("SCAN") },
                     selected = false,
                     onClick = onNavigateToMenu
                 )

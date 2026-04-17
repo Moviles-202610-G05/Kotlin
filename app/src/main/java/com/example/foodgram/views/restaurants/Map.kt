@@ -253,6 +253,7 @@ fun MapScreen(
                 NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, null) }, label = { Text("FEED") })
                 NavigationBarItem(selected = false, onClick = onNavigateToSearch, icon = { Icon(Icons.Default.Search, null) }, label = { Text("SEARCH") })
                 NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, null) }, label = { Text("PROFILE") })
+                NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Camera, null) }, label = { Text("SCAN") })
                 NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Map, null) }, label = { Text("MAP") })
             }
         }

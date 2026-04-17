@@ -76,7 +76,7 @@ fun StudentRegisterScreen(
 
         // --- Input Fields ---
         CustomTextField(
-            value = viewModel.name,
+            value = viewModel.form.name,
             onValueChange = { viewModel.onNameChange(it) },
             label = "Full Name",
             placeholder = "Enter your full name",
@@ -86,7 +86,7 @@ fun StudentRegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         CustomTextField(
-            value = viewModel.username,
+            value = viewModel.form.username,
             onValueChange = { viewModel.onUsernameChange(it) },
             label = "Username",
             placeholder = "Choose a username",
@@ -96,7 +96,7 @@ fun StudentRegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         CustomTextField(
-            value = viewModel.email,
+            value = viewModel.form.email,
             onValueChange = { viewModel.onEmailChange(it) },
             label = "Email Address",
             placeholder = "Enter your email",
@@ -106,7 +106,7 @@ fun StudentRegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         CustomTextField(
-            value = viewModel.universityId,
+            value = viewModel.form.universityId,
             onValueChange = { viewModel.onUniversityIdChange(it) },
             label = "University ID",
             placeholder = "Enter your ID number",
@@ -116,7 +116,7 @@ fun StudentRegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         CustomTextField(
-            value = viewModel.password,
+            value = viewModel.form.password,
             onValueChange = { viewModel.onPasswordChange(it) },
             label = "Password",
             placeholder = "Create a password",
@@ -141,7 +141,7 @@ fun StudentRegisterScreen(
 
         OptGroup(
             options = viewModel.availablePreferences,
-            selectedOptions = viewModel.selectedPreferences,
+            selectedOptions = viewModel.form.selectedPreferences,
             onOptionClick = { viewModel.togglePreference(it) }
         )
 

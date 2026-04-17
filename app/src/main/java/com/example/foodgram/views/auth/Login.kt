@@ -28,8 +28,8 @@ fun LoginScreen(
     onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
-    val email = viewModel.email
-    val password = viewModel.password
+    val email = viewModel.form.email
+    val password = viewModel.form.password
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
 

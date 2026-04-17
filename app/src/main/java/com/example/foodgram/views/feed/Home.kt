@@ -99,8 +99,8 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = false,
                     onClick = onNavigateToMenu,
-                    icon = { Icon(Icons.Default.Menu, contentDescription = "Menu") },
-                    label = { Text("Menu") }
+                    icon = { Icon(Icons.Default.Camera, contentDescription = "Scan") },
+                    label = { Text("SCAN") }
                 )
                 NavigationBarItem(
                     selected = false,

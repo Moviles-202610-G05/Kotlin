@@ -110,7 +110,7 @@ fun RestaurantRegisterView(
         // --- Form Sections ---
         SectionHeader("OWNER DETAILS")
         CustomInputField(
-            value = viewModel.ownerName,
+            value = viewModel.form.ownerName,
             onValueChange = { viewModel.onOwnerNameChange(it) },
             label = "Full Name of the owner",
             icon = Icons.Default.Person
@@ -118,37 +118,37 @@ fun RestaurantRegisterView(
 
         SectionHeader("RESTAURANT DETAILS")
         CustomInputField(
-            value = viewModel.restaurantName,
+            value = viewModel.form.restaurantName,
             onValueChange = { viewModel.onRestaurantNameChange(it) },
             label = "Restaurant Name",
             icon = Icons.Default.Storefront
         )
         CustomInputField(
-            value = viewModel.email,
+            value = viewModel.form.email,
             onValueChange = { viewModel.onEmailChange(it) },
             label = "Business Email",
             icon = Icons.Default.Email
         )
         CustomInputField(
-            value = viewModel.phone,
+            value = viewModel.form.phone,
             onValueChange = { viewModel.onPhoneChange(it) },
             label = "Phone Number",
             icon = Icons.Default.Phone
         )
         CustomInputField(
-            value = viewModel.address,
+            value = viewModel.form.address,
             onValueChange = { viewModel.onAddressChange(it) },
             label = "Address",
             icon = Icons.Default.LocationOn
         )
         CustomInputField(
-            value = viewModel.username,
+            value = viewModel.form.username,
             onValueChange = { viewModel.onUsernameChange(it) },
             label = "Username",
             icon = Icons.Default.AlternateEmail
         )
         CustomInputField(
-            value = viewModel.password,
+            value = viewModel.form.password,
             onValueChange = { viewModel.onPasswordChange(it) },
             label = "Password",
             icon = Icons.Default.Lock,
@@ -156,8 +156,8 @@ fun RestaurantRegisterView(
         )
         
         SimpleCuisineDropdown(
-            selectedCuisine = viewModel.cuisineType,
-            onCuisineSelected = { viewModel.cuisineType = it }
+            selectedCuisine = viewModel.form.cuisineType,
+            onCuisineSelected = { viewModel.onCuisineTypeChange(it) }
         )
 
         // --- Photo Uploader ---
@@ -170,8 +170,8 @@ fun RestaurantRegisterView(
         )
         
         PhotoUploadBox(
-            imageUri = viewModel.restaurantImageUri,
-            onImageSelected = { viewModel.restaurantImageUri = it }
+            imageUri = viewModel.form.restaurantImageUri,
+            onImageSelected = { viewModel.onRestaurantImageChange(it) }
         )
 
         // --- Footer & Button ---

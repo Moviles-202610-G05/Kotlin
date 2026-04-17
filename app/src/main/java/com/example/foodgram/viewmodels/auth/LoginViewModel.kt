@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.example.foodgram.models.ui.LoginForm
 import com.example.foodgram.utils.UserSession
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -12,8 +13,8 @@ class LoginViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    var email by mutableStateOf("")
-    var password by mutableStateOf("")
+    var form by mutableStateOf(LoginForm())
+        private set
     
     var isLoading by mutableStateOf(false)
         private set
@@ -23,10 +24,8 @@ class LoginViewModel : ViewModel() {
 
     fun onEmailChange(newValue: String) {
         if (newValue.length < 30) {
-            if (newValue != email) {
-                email = newValue
-                errorMessage = null
-            }
+            form = form.copy(email = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Email must be less than 30 characters"
         }
@@ -34,17 +33,15 @@ class LoginViewModel : ViewModel() {
 
     fun onPasswordChange(newValue: String) {
         if (newValue.length < 25) {
-            if (newValue != password) {
-                password = newValue
-                errorMessage = null
-            }
+            form = form.copy(password = newValue)
+            errorMessage = null
         } else {
             errorMessage = "Password must be less than 25 characters"
         }
     }
 
     fun login(onSuccess: () -> Unit) {
-        if (email.isBlank() || password.isBlank()) {
+        if (form.email.isBlank() || form.password.isBlank()) {
             errorMessage = "Email and password cannot be empty"
             return
         }
@@ -52,7 +49,7 @@ class LoginViewModel : ViewModel() {
         isLoading = true
         errorMessage = null
 
-        auth.signInWithEmailAndPassword(email, password)
+        auth.signInWithEmailAndPassword(form.email, form.password)
             .addOnSuccessListener { authResult ->
                 val uid = authResult.user?.uid
                 if (uid != null) {
@@ -69,7 +66,7 @@ class LoginViewModel : ViewModel() {
                             } else {
                                 // Fallback to email search if UID isn't set yet (for old accounts)
                                 db.collection("user")
-                                    .whereEqualTo("email", email)
+                                    .whereEqualTo("email", form.email)
                                     .get()
                                     .addOnSuccessListener { emailDocs ->
                                         if (!emailDocs.isEmpty) {
