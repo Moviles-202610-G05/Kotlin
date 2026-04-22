@@ -1,17 +1,16 @@
-package com.example.foodgram.viewmodels.map // Matches your folder path
+package com.example.foodgram.viewmodels.map
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-// Ensure these point to MODELS
 import com.example.foodgram.models.restaurants.MapRestaurant
-import com.example.foodgram.models.restaurants.RestaurantRepository
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-class MapViewModel(
-    private val repository: RestaurantRepository = RestaurantRepository()
-) : ViewModel() {
+class MapViewModel : ViewModel() {
+    private val db = FirebaseFirestore.getInstance()
 
     var restaurants by mutableStateOf<List<MapRestaurant>>(emptyList())
         private set
@@ -29,13 +28,21 @@ class MapViewModel(
     private fun loadData() {
         viewModelScope.launch {
             isLoading = true
-            restaurants = repository.getRestaurants()
+            try {
+                val snapshot = db.collection("restaurants").get().await()
+                restaurants = snapshot.documents.mapNotNull { it.toObject(MapRestaurant::class.java)?.copy(id = it.id) }
+                    .filter { it.name.isNotBlank() }
 
-            val remoteCategories = repository.getCategories()
-            categories = if (remoteCategories.isEmpty()) {
-                listOf("All", "Burgers", "Pizza", "Sushi", "Italian", "Fast Food")
-            } else {
-                listOf("All") + remoteCategories
+                val categoriesSnapshot = db.collection("categories").get().await()
+                val remoteCategories = categoriesSnapshot.documents.mapNotNull { it.getString("name") }.filter { it.isNotBlank() }
+                
+                categories = if (remoteCategories.isEmpty()) {
+                    listOf("All", "Burgers", "Pizza", "Sushi", "Italian", "Fast Food")
+                } else {
+                    listOf("All") + remoteCategories
+                }
+            } catch (e: Exception) {
+                restaurants = emptyList()
             }
             isLoading = false
         }

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.foodgram.models.restaurants.MenuItem
-import com.example.foodgram.models.restaurants.RestaurantReview
+import com.example.foodgram.models.restaurants.ReviewRestaurant
 import com.example.foodgram.ui.theme.FoodGramOrange
 import com.example.foodgram.viewmodels.restaurants.RestaurantDetailViewModel
 import com.example.foodgram.models.restaurants.MapRestaurant
@@ -286,7 +286,7 @@ fun LocationSection(
 }
 
 @Composable
-fun ReviewsSection(reviews: List<RestaurantReview>) {
+fun ReviewsSection(reviews: List<ReviewRestaurant>) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.StarBorder, null, tint = FoodGramOrange, modifier = Modifier.size(20.dp))
@@ -297,13 +297,29 @@ fun ReviewsSection(reviews: List<RestaurantReview>) {
         reviews.forEach { review ->
             Column(modifier = Modifier.padding(vertical = 12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(40.dp).background(Color.LightGray, CircleShape), contentAlignment = Alignment.Center) {
-                        Text(review.username.take(1).uppercase())
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                try {
+                                    Color(android.graphics.Color.parseColor(review.avatarColor))
+                                } catch (e: Exception) {
+                                    Color.LightGray
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            review.avatar.ifEmpty { review.name.take(1).uppercase() },
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(review.username, fontWeight = FontWeight.Bold)
-                        Text(formatReviewDate(review.createdAt), color = Color.Gray, fontSize = 10.sp)
+                        Text(review.name, fontWeight = FontWeight.Bold)
+                        Text(review.date, color = Color.Gray, fontSize = 10.sp)
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Row {
