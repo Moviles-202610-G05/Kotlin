@@ -43,14 +43,7 @@ import com.example.foodgram.views.SectionHeader
 import java.io.File
 import java.io.FileOutputStream
 
-data class MenuItem(
-    val name: String,
-    val price: String,
-    val category: String,
-    val description: String,
-    val imageUri: Uri? = null,
-    val inStock: Boolean = true
-)
+import com.example.foodgram.models.restaurants.MenuItem
 
 @Composable
 fun MenuRegisterView(
@@ -249,7 +242,7 @@ fun MenuRegisterView(
         Button(
             onClick = {
                 if (dishName.isNotBlank() && price.isNotBlank()) {
-                    menuItems.add(MenuItem(dishName, price, category, description, dishImageUri, inStock))
+                    menuItems.add(MenuItem(name = dishName, price = price, category = category, description = description, imageUri = dishImageUri, inStock = inStock))
                     dishName = ""
                     price = ""
                     description = ""

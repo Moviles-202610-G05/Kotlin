@@ -1,16 +1,24 @@
 package com.example.foodgram.viewmodels.map
 
+import android.app.Application
 import androidx.compose.runtime.*
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.foodgram.data.cache.FastCache
+import com.example.foodgram.data.local.AppDatabase
+import com.example.foodgram.data.local.entities.RestaurantEntity
 import com.example.foodgram.models.restaurants.MapRestaurant
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class MapViewModel : ViewModel() {
+class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val db = FirebaseFirestore.getInstance()
+    private val database = AppDatabase.getDatabase(application)
+    private val restaurantDao = database.restaurantDao()
+    private val fastCache = FastCache
 
     var restaurants by mutableStateOf<List<MapRestaurant>>(emptyList())
         private set
@@ -28,10 +36,33 @@ class MapViewModel : ViewModel() {
     private fun loadData() {
         viewModelScope.launch {
             isLoading = true
+            
+            // 1. FastCache
+            val cached = fastCache.get("restaurants") as? List<MapRestaurant>
+            if (cached != null) {
+                restaurants = cached
+            }
+
+            // 2. Room
+            val local = restaurantDao.getAllRestaurants().first()
+            if (local.isNotEmpty() && restaurants.isEmpty()) {
+                restaurants = local.map { it.toMapRestaurant() }
+            }
+
             try {
+                // 3. Firebase
                 val snapshot = db.collection("restaurants").get().await()
-                restaurants = snapshot.documents.mapNotNull { it.toObject(MapRestaurant::class.java)?.copy(id = it.id) }
+                val remoteRestaurants = snapshot.documents.mapNotNull { it.toObject(MapRestaurant::class.java)?.copy(id = it.id) }
                     .filter { it.name.isNotBlank() }
+
+                if (remoteRestaurants.isNotEmpty()) {
+                    restaurants = remoteRestaurants
+                    fastCache.put("restaurants", remoteRestaurants)
+                    
+                    // Sync Room
+                    restaurantDao.deleteAll()
+                    restaurantDao.insertRestaurants(remoteRestaurants.map { it.toEntity() })
+                }
 
                 val categoriesSnapshot = db.collection("categories").get().await()
                 val remoteCategories = categoriesSnapshot.documents.mapNotNull { it.getString("name") }.filter { it.isNotBlank() }
@@ -42,11 +73,53 @@ class MapViewModel : ViewModel() {
                     listOf("All") + remoteCategories
                 }
             } catch (e: Exception) {
-                restaurants = emptyList()
+                // Keep existing data
             }
             isLoading = false
         }
     }
+
+    private fun MapRestaurant.toEntity() = RestaurantEntity(
+        id = id,
+        name = name,
+        rating = rating,
+        badge = badge,
+        badge2 = badge2,
+        cuisine = cuisine,
+        description = description,
+        direction = direction,
+        distance = distance,
+        image = image,
+        lat = lat,
+        long = long,
+        nuberReviews = nuberReviews,
+        price = price,
+        spots = spots,
+        spotsA = spotsA,
+        tags = tags,
+        time = time
+    )
+
+    private fun RestaurantEntity.toMapRestaurant() = MapRestaurant(
+        id = id,
+        name = name,
+        rating = rating,
+        badge = badge,
+        badge2 = badge2,
+        cuisine = cuisine,
+        description = description,
+        direction = direction,
+        distance = distance,
+        image = image,
+        lat = lat,
+        long = long,
+        nuberReviews = nuberReviews,
+        price = price,
+        spots = spots,
+        spotsA = spotsA,
+        tags = tags,
+        time = time
+    )
 
     fun getFilteredRestaurants(userLocation: LatLng): List<MapRestaurant> {
         val filtered = if (selectedCategory.equals("All", ignoreCase = true)) {
