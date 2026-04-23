@@ -3,6 +3,7 @@ package com.example.foodgram.models.restaurants
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.PropertyName
 import com.example.foodgram.models.map.PointPosition
+import com.google.firebase.Timestamp
 
 
 data class MapRestaurant(
@@ -32,3 +33,27 @@ data class MapRestaurant(
         LatLng(position.geopoint.latitude, position.geopoint.longitude)
     }
 }
+
+data class MenuItem(
+    val id: String = "",
+    val name: String = "",
+    val price: String = "",
+    val category: String = "",
+    val description: String = "",
+    val image: String = "",
+    val imageUri: android.net.Uri? = null,
+    val restaurant: String = "", // Restaurant name or ID
+    val inStock: Boolean = true
+)
+
+data class ReviewRestaurant(
+    val id: String = "",
+    val restaurant: String = "",
+    val name: String = "",
+    val rating: Int = 0,
+    val comment: String = "",
+    val date: String = "",
+    val avatar: String = "",
+    val avatarColor: String = "#CCCCCC",
+    val createdAt: Timestamp? = null
+)

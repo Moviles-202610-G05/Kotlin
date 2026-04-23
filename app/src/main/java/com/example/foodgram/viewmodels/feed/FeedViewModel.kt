@@ -1,10 +1,14 @@
 package com.example.foodgram.viewmodels.feed
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.foodgram.data.cache.FastCache
+import com.example.foodgram.data.local.AppDatabase
+import com.example.foodgram.data.local.entities.PostEntity
 import com.example.foodgram.models.feed.Post
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -15,10 +19,14 @@ import kotlinx.coroutines.tasks.await
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 
-class FeedViewModel : ViewModel() {
+class FeedViewModel(application: Application) : AndroidViewModel(application) {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+    private val database = AppDatabase.getDatabase(application)
+    private val postDao = database.postDao()
+    private val fastCache = FastCache
 
     var posts by mutableStateOf<List<Post>>(emptyList())
         private set
@@ -33,9 +41,24 @@ class FeedViewModel : ViewModel() {
     fun loadPosts() {
         viewModelScope.launch {
             isLoading = true
+
+            // 1. FastCache check
+            val cached = fastCache.get("feed_posts") as? List<Post>
+            if (cached != null) {
+                posts = cached
+            }
+
+            // 2. Room check
+            if (posts.isEmpty()) {
+                val local = postDao.getAllPosts().first()
+                if (local.isNotEmpty()) {
+                    posts = local.map { it.toPost() }
+                }
+            }
+
             try {
                 val currentUserId = auth.currentUser?.uid
-                // 1. Limit to last 50 posts and order by newest
+                // 3. Firebase fetch
                 val snapshot = db.collection("posts")
                     .orderBy("createdAt", Query.Direction.DESCENDING)
                     .limit(50)
@@ -46,32 +69,65 @@ class FeedViewModel : ViewModel() {
                     doc.toObject(Post::class.java)?.copy(id = doc.id)
                 }
 
-                // 2. Draw interface immediately with base data (without likes)
-                posts = basePosts
-
-                if (currentUserId != null) {
-                    // 3. Fetch all likes in parallel using async/awaitAll
-                    val updatedPosts = basePosts.map { post ->
-                        async {
-                            try {
-                                val likeDoc = db.collection("posts").document(post.id)
-                                    .collection("likes").document(currentUserId).get().await()
-                                post.copy(isLiked = likeDoc.exists())
-                            } catch (e: Exception) {
-                                post
-                            }
-                        }
-                    }.awaitAll()
+                if (basePosts.isNotEmpty()) {
+                    posts = basePosts
                     
-                    // 4. Update the UI again once likes are known
-                    posts = updatedPosts
+                    if (currentUserId != null) {
+                        val updatedPosts = basePosts.map { post ->
+                            async {
+                                try {
+                                    val likeDoc = db.collection("posts").document(post.id)
+                                        .collection("likes").document(currentUserId).get().await()
+                                    post.copy(isLiked = likeDoc.exists())
+                                } catch (e: Exception) {
+                                    post
+                                }
+                            }
+                        }.awaitAll()
+                        posts = updatedPosts
+                    }
+
+                    // Sync Cache & Room
+                    fastCache.put("feed_posts", posts)
+                    postDao.deleteAll()
+                    postDao.insertPosts(posts.map { it.toEntity() })
                 }
             } catch (e: Exception) {
-                // Keep existing posts or show empty
+                // Keep existing
             }
             isLoading = false
         }
     }
+
+    private fun Post.toEntity() = PostEntity(
+        id = id,
+        username = username,
+        userId = userId,
+        restaurantName = restaurantName,
+        restaurantId = restaurantId,
+        profilePhoto = profilePhoto,
+        description = description,
+        photoUrl = photoUrl,
+        likesCount = likesCount,
+        commentsCount = commentsCount,
+        createdAt = createdAt?.seconds,
+        isLiked = isLiked
+    )
+
+    private fun PostEntity.toPost() = Post(
+        id = id,
+        username = username,
+        userId = userId,
+        restaurantName = restaurantName,
+        restaurantId = restaurantId,
+        profilePhoto = profilePhoto,
+        description = description,
+        photoUrl = photoUrl,
+        likesCount = likesCount,
+        commentsCount = commentsCount,
+        createdAt = createdAt?.let { com.google.firebase.Timestamp(it, 0) },
+        isLiked = isLiked
+    )
 
     fun toggleLike(post: Post) {
         val userId = auth.currentUser?.uid ?: return

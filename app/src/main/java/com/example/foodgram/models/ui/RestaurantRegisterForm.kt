@@ -1,7 +1,6 @@
 package com.example.foodgram.models.ui
 
 import android.net.Uri
-import com.example.foodgram.views.auth.MenuItem
 
 data class RestaurantRegisterForm(
     val ownerName: String = "",
