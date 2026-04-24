@@ -113,20 +113,38 @@ class TrackerFacade(
     }
 
     private fun encodeImageToBase64(context: Context, uri: Uri): String {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-            ?: throw IllegalStateException("Unable to decode selected image")
-        val outputStream = ByteArrayOutputStream()
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = false
+                inSampleSize = 2 // Reducir a la mitad para ahorrar memoria al decodificar
+            }
+            val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
+                ?: throw IllegalStateException("Unable to decode image")
+            
+            val outputStream = ByteArrayOutputStream()
+            
+            // Redimensionar a un máximo de 1024px para la IA (suficiente calidad, menos RAM)
+            val maxDimension = 1024
+            val scale = maxOf(bitmap.width, bitmap.height).toFloat() / maxDimension
+            val targetWidth = if (scale > 1) (bitmap.width / scale).toInt() else bitmap.width
+            val targetHeight = if (scale > 1) (bitmap.height / scale).toInt() else bitmap.height
 
-        val scaledBitmap = Bitmap.createScaledBitmap(
-            bitmap,
-            800,
-            800 * bitmap.height / bitmap.width,
-            true
-        )
-        scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-
-        return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+            val scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true)
+            
+            // Liberar memoria del original si es diferente
+            if (scaledBitmap != bitmap) {
+                bitmap.recycle()
+            }
+            
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+            val bytes = outputStream.toByteArray()
+            scaledBitmap.recycle() // Liberar memoria del escalado
+            
+            Base64.encodeToString(bytes, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            throw IllegalStateException("Error processing image: ${e.localizedMessage}")
+        }
     }
 
     private fun extractAndNormalizeJson(rawContent: String): String {
