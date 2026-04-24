@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.example.foodgram.models.tracker.MealHistoryItem
 import java.util.Locale
 import com.example.foodgram.ui.theme.OrangeFoodGram
@@ -228,9 +230,16 @@ fun HistoryItem(meal: MealHistoryItem) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Meal Image
+            // Meal Image con Cache y Placeholder
             Image(
-                painter = rememberAsyncImagePainter(meal.imagePath),
+                painter = rememberAsyncImagePainter(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(meal.imagePath)
+                        .crossfade(true)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .build()
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .size(60.dp)
@@ -438,7 +447,12 @@ fun PhotoUploadBox(
     ) {
         if (imageUri != null) {
             Image(
-                painter = rememberAsyncImagePainter(imageUri),
+                painter = rememberAsyncImagePainter(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUri)
+                        .crossfade(true)
+                        .build()
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
