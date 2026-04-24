@@ -14,7 +14,9 @@ import com.example.foodgram.models.tracker.MealAnalysis
 import com.example.foodgram.models.tracker.MealHistoryItem
 import com.example.foodgram.services.tracker.TrackerFacade
 import com.example.foodgram.utils.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class TrackerViewModel(
     private val trackerFacade: TrackerFacade = TrackerFacade()
@@ -32,22 +34,33 @@ class TrackerViewModel(
 
     fun analyzeImage(context: Context, imageUri: Uri) {
         viewModelScope.launch {
-            isLoading = true
+            // 1. Iniciamos en el Main Thread para bloquear la UI inmediatamente
+            isLoading = true 
             errorMessage = null
             analysisResult = null
 
             try {
-                analysisResult = trackerFacade.analyzeMeal(context, imageUri)
+                // 2. Saltamos a un hilo de IO para el procesamiento pesado de la IA y fotos
+                val result = withContext(Dispatchers.IO) {
+                    trackerFacade.analyzeMeal(context, imageUri)
+                }
+                
+                // 3. Volvemos al Main (automático) para guardar el resultado
+                analysisResult = result
                 currentImageUri = imageUri
             } catch (e: Exception) {
                 errorMessage = "Analysis failed: ${e.localizedMessage}"
             } finally {
+                // 4. Desbloqueamos el botón en el Main
                 isLoading = false
             }
         }
     }
 
     fun saveMealToHistory(onSuccess: () -> Unit) {
+        // 1. Evitar duplicados: Si ya está guardando o no hay resultados, salir.
+        if (isSaving || analysisResult == null) return
+
         val userEmail = UserSession.currentUserEmail ?: return
         val result = analysisResult ?: return
         val imageUri = currentImageUri ?: return
@@ -56,7 +69,15 @@ class TrackerViewModel(
             isSaving = true
             try {
                 val userId = UserSession.currentUserUid ?: "unknown"
-                trackerFacade.saveMealToHistory(userEmail, userId, result, imageUri)
+                
+                // 2. Ejecutar el guardado (Firestore/Storage) en hilo de IO
+                withContext(Dispatchers.IO) {
+                    trackerFacade.saveMealToHistory(userEmail, userId, result, imageUri)
+                }
+
+                // 3. Limpiar el resultado actual para que no se pueda volver a guardar el mismo
+                analysisResult = null 
+                currentImageUri = null
 
                 fetchMealHistory()
                 onSuccess()
