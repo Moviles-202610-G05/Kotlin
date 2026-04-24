@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -30,21 +31,27 @@ import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
 import com.example.foodgram.views.auth.ForgotPasswordScreen
 import com.example.foodgram.views.settings.NutritionGoalsScreen
 import com.example.foodgram.views.tracker.TrackerScreen
+import com.example.foodgram.utils.UserSession
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UserSession.init(this)
+        
         enableEdgeToEdge()
         setContent {
             FoodGramTheme {
                 val navController = rememberNavController()
                 val restaurantViewModel: RestaurantRegisterViewModel = viewModel()
 
+                // Simplicidad máxima para evitar bloqueos en el Main Thread
+                val startDest = if (UserSession.currentUserUid != null) Home else Login
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = Login,
+                        startDestination = startDest,
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable<Login> {
@@ -163,6 +170,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToNutritionGoals = { navController.navigate(NutritionGoals) },
                                 onNavigateToPrivacySettings = { /* TODO */ },
                                 onLogout = {
+                                    UserSession.logout()
                                     navController.navigate(Login) {
                                         popUpTo(0) { inclusive = true }
                                     }
