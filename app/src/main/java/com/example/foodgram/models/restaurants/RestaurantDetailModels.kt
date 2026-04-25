@@ -42,8 +42,9 @@ data class MenuItem(
     val description: String = "",
     val image: String = "",
     val imageUri: android.net.Uri? = null,
-    val restaurant: String = "", // Restaurant name or ID
-    val inStock: Boolean = true
+    val restaurant: String = "",
+    val inStock: Boolean = true,
+    val isUploading: Boolean = false // Nuevo campo para feedback
 )
 
 data class ReviewRestaurant(
