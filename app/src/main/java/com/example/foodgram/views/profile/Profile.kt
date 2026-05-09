@@ -1,5 +1,7 @@
 package com.example.foodgram.views.profile
 
+import java.io.File
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,17 +23,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.foodgram.navigation.NutritionGoals
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
+import com.example.foodgram.utils.UserSession
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.example.foodgram.utils.UserSession
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,14 +52,12 @@ fun UserScreen(
     onNavigateToPrivacySettings: () -> Unit,
     onLogout: () -> Unit
 ) {
-
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
-
+    val context = LocalContext.current
+    val userId = UserSession.currentUserDocId
 
     var name by remember { mutableStateOf("Loading...") }
-    var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var caloriesGoal by remember { mutableStateOf(2000f) }
     var proteinGoal by remember { mutableStateOf(150f) }
@@ -66,7 +68,8 @@ fun UserScreen(
     var reviewsCount by remember { mutableStateOf(0) }
     var savedCount by remember { mutableStateOf(0) }
 
-    val userId = UserSession.currentUserDocId
+    var profilePhotoPath by remember { mutableStateOf(UserSession.currentProfilePhotoPath) }
+    var profilePhotoUrl by remember { mutableStateOf(UserSession.currentProfilePhotoUrl) }
 
     DisposableEffect(userId) {
         if (userId == null) {
@@ -78,18 +81,22 @@ fun UserScreen(
 
                     if (snapshot.exists()) {
                         name = snapshot.getString("name") ?: "User"
-                        username = snapshot.getString("username") ?: ""
-                        email = snapshot.getString("email") ?: ""
                         location = snapshot.getString("location") ?: "Not defined"
 
                         caloriesGoal = snapshot.getDouble("caloriesGoal")?.toFloat() ?: 2000f
                         proteinGoal = snapshot.getDouble("proteinGoal")?.toFloat() ?: 150f
                         carbsGoal = snapshot.getDouble("carbsGoal")?.toFloat() ?: 200f
                         fatGoal = snapshot.getDouble("fatGoal")?.toFloat() ?: 67f
+
                         ordersCount = snapshot.getLong("ordersCount")?.toInt() ?: 0
                         reviewsCount = snapshot.getLong("reviewsCount")?.toInt() ?: 0
                         savedCount = snapshot.getLong("savedCount")?.toInt() ?: 0
 
+                        profilePhotoPath = snapshot.getString("photoPath") ?: profilePhotoPath
+                        profilePhotoUrl = snapshot.getString("photoUrl") ?: profilePhotoUrl
+
+                        UserSession.currentProfilePhotoPath = profilePhotoPath
+                        UserSession.currentProfilePhotoUrl = profilePhotoUrl
                     }
                 }
 
@@ -151,7 +158,7 @@ fun UserScreen(
                     icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
                     label = { Text("PROFILE") },
                     selected = true,
-                    onClick = { /* Current */ },
+                    onClick = { },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = OrangeFoodGram)
                 )
                 NavigationBarItem(
@@ -179,6 +186,11 @@ fun UserScreen(
         ) {
             Spacer(modifier = Modifier.height(28.dp))
 
+            val avatarModel = when {
+                !profilePhotoPath.isNullOrBlank() -> File(profilePhotoPath!!)
+                !profilePhotoUrl.isNullOrBlank() -> profilePhotoUrl
+                else -> null
+            }
 
             Box(
                 modifier = Modifier
@@ -186,19 +198,33 @@ fun UserScreen(
                     .border(width = 3.dp, color = OrangeFoodGram, shape = CircleShape)
                     .padding(3.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFF0F0F0)),
+                    .background(Color(0xFFF0F0F0))
+                    .clickable { navController.navigate(PersonalInfo) },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(64.dp)
-                )
+                if (avatarModel != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(avatarModel)
+                            .crossfade(true)
+                            .memoryCacheKey("profile_${userId ?: "guest"}")
+                            .diskCacheKey("profile_${userId ?: "guest"}")
+                            .build(),
+                        contentDescription = "Profile photo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
-
 
             Text(
                 text = name,
@@ -225,7 +251,6 @@ fun UserScreen(
             }
 
             Spacer(modifier = Modifier.height(28.dp))
-
 
             Surface(
                 shape = RoundedCornerShape(20.dp),
@@ -268,7 +293,6 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-
             SectionHeader(
                 title = "Nutrition Goals",
                 action = "Details",
@@ -283,7 +307,6 @@ fun UserScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-
 
             SectionHeader(title = "Account Settings", action = "")
             Spacer(modifier = Modifier.height(12.dp))
@@ -307,11 +330,12 @@ fun UserScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-
             OutlinedButton(
                 onClick = {
                     auth.signOut()
                     UserSession.currentUserDocId = null
+                    UserSession.currentProfilePhotoPath = null
+                    UserSession.currentProfilePhotoUrl = null
                     onLogout()
                 },
                 modifier = Modifier.fillMaxWidth()
