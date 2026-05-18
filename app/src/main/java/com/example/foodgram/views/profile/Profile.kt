@@ -134,6 +134,15 @@ fun UserScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White
                 ),
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Logout",
+                            tint = Color(0xFFFF2600)
+                        )
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(elevation = 0.5.dp, shape = RectangleShape)
@@ -302,35 +311,13 @@ fun UserScreen(
                 onTap = onNavigateToPrivacySettings
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            OutlinedButton(
-                onClick = {
-                    auth.signOut()
-                    UserSession.currentUserDocId = null
-                    UserSession.currentProfilePhotoPath = null
-                    UserSession.currentProfilePhotoUrl = null
-                    onLogout()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = null,
-                        tint = Color(0xFFFF2600)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Logout",
-                        color = OrangeFoodGram,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            SettingsItem(
+                icon = Icons.AutoMirrored.Filled.Logout,
+                title = "Logout",
+                subtitle = "Sign out of your account",
+                bgColor = Color(0xFFFFEBEB),
+                onTap = onLogout
+            )
 
             Spacer(modifier = Modifier.height(40.dp))
         }

@@ -179,6 +179,32 @@ class MenuManagementViewModel : ViewModel() {
         }
     }
 
+    fun updateOccupiedSeats(newCount: Int) {
+        val uiStateValue = _uiState.value
+        val restaurantId = uiStateValue.restaurantId ?: return
+        if (newCount < 0 || newCount > uiStateValue.totalSeats) return
+        
+        val newAvailable = uiStateValue.totalSeats - newCount
+
+        viewModelScope.launch {
+            try {
+                firestore.collection("restaurants").document(restaurantId)
+                    .update(
+                        "seatsOccupied", newCount,
+                        "spotsA", newAvailable
+                    )
+                    .await()
+                
+                _uiState.value = _uiState.value.copy(
+                    occupiedSeats = newCount,
+                    emptySeats = newAvailable
+                )
+            } catch (e: Exception) {
+                // Handle error
+            }
+        }
+    }
+
     fun updateEmptySeats(newCount: Int) {
         val uiStateValue = _uiState.value
         val restaurantId = uiStateValue.restaurantId ?: return

@@ -152,7 +152,8 @@ fun RestaurantDetailScreen(
                             ) {
                                 Column {
                                     Text("Available", color = Color(0xFF2D3748), fontSize = 12.sp)
-                                    Text("${restaurant.spotsA}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
+                                    val available = (restaurant.numberOfSeats - restaurant.seatsOccupied).coerceAtLeast(0)
+                                    Text("$available", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
                                 }
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text("Occupied", color = Color(0xFF2D3748), fontSize = 12.sp)
@@ -163,12 +164,14 @@ fun RestaurantDetailScreen(
                                     Text("${restaurant.numberOfSeats}", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
                                 }
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            val progress = if (restaurant.numberOfSeats > 0) (restaurant.numberOfSeats - restaurant.spotsA).toFloat() / restaurant.numberOfSeats.toFloat() else 0f
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val progress = if (restaurant.numberOfSeats > 0) {
+                                restaurant.seatsOccupied.toFloat() / restaurant.numberOfSeats.toFloat()
+                            } else 0f
                             LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                                color = FoodGramOrange,
+                                progress = { progress.coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
+                                color = if (progress >= 0.9f) Color.Red else FoodGramOrange,
                                 trackColor = Color(0xFFEDF2F7)
                             )
                         }

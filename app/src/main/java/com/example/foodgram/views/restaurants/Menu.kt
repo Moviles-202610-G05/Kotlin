@@ -47,7 +47,6 @@ fun RestaurantMenuManagementScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All Items") }
 
-    val emptySeats = uiState.emptySeats
     val occupiedSeats = uiState.occupiedSeats
     val totalSeats = uiState.totalSeats
     val menuItems = uiState.menuItems
@@ -181,8 +180,9 @@ fun RestaurantMenuManagementScreen(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Column {
-                                Text("Empty", color = Color.Gray, fontSize = 12.sp)
-                                Text("$emptySeats", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                                val available = (totalSeats - occupiedSeats).coerceAtLeast(0)
+                                Text("Available", color = Color.Gray, fontSize = 12.sp)
+                                Text("$available", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                             }
                             Column {
                                 Text("Occupied", color = Color.Gray, fontSize = 12.sp)
@@ -196,14 +196,22 @@ fun RestaurantMenuManagementScreen(
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(
-                                onClick = { viewModel.updateEmptySeats(emptySeats - 1) },
+                                onClick = { 
+                                    if (occupiedSeats > 0) {
+                                        viewModel.updateOccupiedSeats(occupiedSeats - 1) 
+                                    }
+                                },
                                 modifier = Modifier.size(32.dp).background(Color.White, CircleShape).border(1.dp, Color.LightGray, CircleShape)
                             ) {
                                 Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             IconButton(
-                                onClick = { viewModel.updateEmptySeats(emptySeats + 1) },
+                                onClick = { 
+                                    if (occupiedSeats < totalSeats) {
+                                        viewModel.updateOccupiedSeats(occupiedSeats + 1) 
+                                    }
+                                },
                                 modifier = Modifier.size(32.dp).background(FoodGramOrange, CircleShape)
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))

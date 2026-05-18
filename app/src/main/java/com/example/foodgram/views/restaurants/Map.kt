@@ -194,11 +194,25 @@ fun MapScreen(
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(28.dp), color = Color.White, shadowElevation = 4.dp) {
                     TextField(
-                        value = "", onValueChange = {},
+                        value = viewModel.searchQuery,
+                        onValueChange = { viewModel.searchQuery = it },
                         placeholder = { Text("Search for food...") },
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = FoodGramOrange) },
-                        colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-                        modifier = Modifier.fillMaxWidth()
+                        trailingIcon = {
+                            if (viewModel.searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear search", tint = Color.Gray)
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
                     )
                 }
             }
@@ -230,17 +244,19 @@ fun MapScreen(
                             badge = restaurant.badge,
                             badge2 = restaurant.badge2,
                             imageUrl = restaurant.image,
+                            seatsOccupied = restaurant.seatsOccupied,
+                            numberOfSeats = restaurant.numberOfSeats,
                             onClick = {
+                                if (restaurant.id.isNotEmpty()) {
+                                    onNavigateToRestaurantDetail(restaurant.id)
+                                }
+                            },
+                            onDoubleTap = {
                                 scope.launch {
                                     cameraPositionState.animate(
                                         update = CameraUpdateFactory.newLatLngZoom(restaurant.location, 17f),
                                         durationMs = 1000
                                     )
-                                }
-                            },
-                            onDoubleTap = {
-                                if (restaurant.id.isNotEmpty()) {
-                                    onNavigateToRestaurantDetail(restaurant.id)
                                 }
                             }
                         )
@@ -284,6 +300,8 @@ fun RestaurantMapCard(
     badge: String,
     badge2: String?,
     imageUrl: String,
+    seatsOccupied: Long = 0,
+    numberOfSeats: Long = 0,
     onClick: () -> Unit = {},
     onDoubleTap: () -> Unit = {}
 ) {
@@ -313,6 +331,31 @@ fun RestaurantMapCard(
                     Text(" $rating", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Text(" • $distance", color = Color.Gray, fontSize = 12.sp)
                 }
+                
+                if (numberOfSeats > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                        Icon(Icons.Default.Groups, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        val available = (numberOfSeats - seatsOccupied).coerceAtLeast(0)
+                        Text(" $available available ", color = Color.Gray, fontSize = 11.sp)
+                        
+                        val progress = seatsOccupied.toFloat() / numberOfSeats.toFloat()
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFEDF2F7))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                                    .fillMaxHeight()
+                                    .background(if (progress > 0.9f) Color.Red else FoodGramOrange)
+                            )
+                        }
+                    }
+                }
+
                 Row(modifier = Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (badge.isNotEmpty()) {
                         BadgeChip(text = badge)

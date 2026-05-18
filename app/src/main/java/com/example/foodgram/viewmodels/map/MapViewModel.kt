@@ -27,6 +27,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     var selectedCategory by mutableStateOf("All")
+    var searchQuery by mutableStateOf("")
     var isLoading by mutableStateOf(false)
 
     init {
@@ -126,13 +127,22 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     fun getFilteredRestaurants(userLocation: LatLng): List<MapRestaurant> {
-        val filtered = if (selectedCategory.equals("All", ignoreCase = true)) {
-            restaurants
-        } else {
-            restaurants.filter { restaurant ->
+        val filtered = restaurants.filter { restaurant ->
+            val matchesCategory = if (selectedCategory.equals("All", ignoreCase = true)) {
+                true
+            } else {
                 restaurant.cuisine.contains(selectedCategory, ignoreCase = true) ||
                         restaurant.tags.any { it.contains(selectedCategory, ignoreCase = true) }
             }
+            
+            val matchesSearch = if (searchQuery.isBlank()) {
+                true
+            } else {
+                restaurant.name.contains(searchQuery, ignoreCase = true) ||
+                        restaurant.cuisine.contains(searchQuery, ignoreCase = true)
+            }
+            
+            matchesCategory && matchesSearch
         }
         return filtered.sortedBy { calculateDistanceMeters(userLocation, it.location) }
     }
