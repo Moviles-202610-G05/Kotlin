@@ -122,7 +122,7 @@ class RestaurantRegisterViewModel : ViewModel() {
                 "category" to item.category,
                 "image" to finalImageUrl,
                 "restaurant" to form.restaurantName,
-                "inStock" to item.inStock
+                "availability" to (if (item.inStock) 1 else 0)
             )
 
             // Guardar en Firestore

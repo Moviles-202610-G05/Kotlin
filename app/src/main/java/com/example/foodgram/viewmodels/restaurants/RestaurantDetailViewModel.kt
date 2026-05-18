@@ -67,6 +67,16 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                 } catch (e: Exception) {
                     restaurant = null
                 }
+            } else {
+                // Periodically or on load, refresh restaurant data to get latest seats
+                try {
+                    val snapshot = db.collection("restaurants").document(restaurantId)
+                        .get()
+                        .await()
+                    restaurant = snapshot.toObject(MapRestaurant::class.java)?.copy(id = snapshot.id)
+                } catch (e: Exception) {
+                    // Keep existing if fetch fails
+                }
             }
             
             val restaurantName = restaurant?.name ?: ""
@@ -139,7 +149,7 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
         description = description,
         image = image,
         restaurant = restaurant,
-        inStock = inStock
+        availability = availability
     )
 
     private fun MenuItemEntity.toMenuItem() = MenuItem(
@@ -150,7 +160,7 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
         description = description,
         image = image,
         restaurant = restaurant,
-        inStock = inStock
+        availability = availability
     )
 
     private fun ReviewRestaurant.toEntity() = ReviewEntity(

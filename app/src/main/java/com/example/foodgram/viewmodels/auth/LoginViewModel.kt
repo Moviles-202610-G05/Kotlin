@@ -61,6 +61,7 @@ class LoginViewModel : ViewModel() {
                             if (!documents.isEmpty) {
                                 val userDoc = documents.documents[0]
                                 UserSession.currentUserDocId = userDoc.id
+                                UserSession.currentUserRole = userDoc.getString("roll")
                                 isLoading = false
                                 onSuccess()
                             } else {
@@ -77,6 +78,7 @@ class LoginViewModel : ViewModel() {
                                                 .update("uid", uid)
                                             
                                             UserSession.currentUserDocId = userDoc.id
+                                            UserSession.currentUserRole = userDoc.getString("roll")
                                             isLoading = false
                                             onSuccess()
                                         } else {

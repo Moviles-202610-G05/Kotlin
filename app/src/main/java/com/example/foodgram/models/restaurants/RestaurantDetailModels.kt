@@ -23,6 +23,8 @@ data class MapRestaurant(
     val price: String = "",
     val spots: Long = 0,
     val spotsA: Long = 0,
+    val numberOfSeats: Long = 0,
+    val seatsOccupied: Long = 0,
     val tags: List<String> = emptyList(),
     val time: String = "",
     val position: PointPosition = PointPosition()
@@ -43,9 +45,11 @@ data class MenuItem(
     val image: String = "",
     val imageUri: android.net.Uri? = null,
     val restaurant: String = "",
-    val inStock: Boolean = true,
-    val isUploading: Boolean = false // Nuevo campo para feedback
-)
+    val availability: Int = 1, // 1 for inStock, 0 for outOfStock
+    val isUploading: Boolean = false
+) {
+    val inStock: Boolean get() = availability == 1
+}
 
 data class ReviewRestaurant(
     val id: String = "",

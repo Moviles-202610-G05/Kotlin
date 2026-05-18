@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.foodgram.ui.theme.FoodGramOrange
+import com.example.foodgram.views.components.FoodGramNavigationBar
+import com.example.foodgram.views.components.FoodGramScreen
 
 import com.example.foodgram.models.auth.Restaurant
 
@@ -76,13 +78,14 @@ fun SearchRestaurantsScreen(
 ) {
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
-                NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) }, label = { Text("FEED") })
-                NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Search, contentDescription = null) }, label = { Text("SEARCH") })
-                NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, contentDescription = null) }, label = { Text("PROFILE") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Camera, contentDescription = null) }, label = { Text("SCAN") })
-                NavigationBarItem(selected = false, onClick = { onNavigateToMap(null) }, icon = { Icon(Icons.Default.Place, contentDescription = null) }, label = { Text("MAP") })
-            }
+            FoodGramNavigationBar(
+                currentScreen = FoodGramScreen.SEARCH,
+                onNavigateToFeed = onNavigateToFeed,
+                onNavigateToSearch = { },
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToMenu = onNavigateToMenu,
+                onNavigateToMap = { onNavigateToMap(null) }
+            )
         }
     ) { innerPadding ->
         LazyColumn(

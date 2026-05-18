@@ -1,5 +1,6 @@
 package com.example.foodgram.views.restaurants
 
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +26,8 @@ import com.example.foodgram.models.restaurants.ReviewRestaurant
 import com.example.foodgram.ui.theme.FoodGramOrange
 import com.example.foodgram.viewmodels.restaurants.RestaurantDetailViewModel
 import com.example.foodgram.models.restaurants.MapRestaurant
+import com.example.foodgram.views.components.FoodGramNavigationBar
+import com.example.foodgram.views.components.FoodGramScreen
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,13 +53,14 @@ fun RestaurantDetailScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
-                NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, null) }, label = { Text("FEED") })
-                NavigationBarItem(selected = true, onClick = onNavigateToSearch, icon = { Icon(Icons.Default.Search, null) }, label = { Text("SEARCH") })
-                NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, null) }, label = { Text("PROFILE") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Restaurant, null) }, label = { Text("MENU") })
-                NavigationBarItem(selected = false, onClick = { onNavigateToMap(null) }, icon = { Icon(Icons.Default.Map, null) }, label = { Text("MAP") })
-            }
+            FoodGramNavigationBar(
+                currentScreen = FoodGramScreen.SEARCH, // Detailed from Search context mostly
+                onNavigateToFeed = onNavigateToFeed,
+                onNavigateToSearch = onNavigateToSearch,
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToMenu = onNavigateToMenu,
+                onNavigateToMap = { onNavigateToMap(null) }
+            )
         }
     ) { padding ->
         if (viewModel.isLoading) {
@@ -126,36 +130,49 @@ fun RestaurantDetailScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Availability Card
-                    //Surface(
-                    //    modifier = Modifier.fillMaxWidth(),
-                    //    shape = RoundedCornerShape(16.dp),
-                    //    color = Color(0xFFF0FFF4), // Light green
-                    //    border = BorderStroke(1.dp, Color(0xFFC6F6D5))
-                    //) {
-                    //    Column(modifier = Modifier.padding(16.dp)) {
-                    //        Row(verticalAlignment = Alignment.CenterVertically) {
-                    //            Box(modifier = Modifier.size(8.dp).background(Color(0xFF48BB78), CircleShape))
-                    //            Spacer(modifier = Modifier.width(8.dp))
-                    //            Text("LIVE AVAILABILITY", color = Color(0xFF2F855A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    //            Spacer(modifier = Modifier.weight(1f))
-                    //            Text("Updated 1m ago", color = Color.Gray, fontSize = 10.sp)
-                    //        }
-                    //        Spacer(modifier = Modifier.height(12.dp))
-                    //        Row(verticalAlignment = Alignment.Bottom) {
-                    //            Text("${restaurant.spotsA}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
-                    //            Text(" Available Now", fontSize = 16.sp, color = Color(0xFF2D3748), modifier = Modifier.padding(bottom = 4.dp))
-                    //            Spacer(modifier = Modifier.weight(1f))
-                    //            Text("Total: ${restaurant.spots} spots", fontSize = 12.sp, color = Color.Gray)
-                    //        }
-                    //        Spacer(modifier = Modifier.height(8.dp))
-                    //        LinearProgressIndicator(
-                    //            progress = { restaurant.spotsA.toFloat() / restaurant.spots.toFloat() },
-                    //            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                    //            color = Color(0xFF48BB78),
-                    //            trackColor = Color(0xFFEDF2F7)
-                    //        )
-                    //    }
-                    //}
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFF0FFF4), // Light green
+                        border = BorderStroke(1.dp, Color(0xFFC6F6D5))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(8.dp).background(Color(0xFF48BB78), CircleShape))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("LIVE AVAILABILITY", color = Color(0xFF2F855A), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text("Updated live", color = Color.Gray, fontSize = 10.sp)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Column {
+                                    Text("Available", color = Color(0xFF2D3748), fontSize = 12.sp)
+                                    Text("${restaurant.spotsA}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("Occupied", color = Color(0xFF2D3748), fontSize = 12.sp)
+                                    Text("${restaurant.seatsOccupied}", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2D3748))
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Total", color = Color.Gray, fontSize = 12.sp)
+                                    Text("${restaurant.numberOfSeats}", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val progress = if (restaurant.numberOfSeats > 0) (restaurant.numberOfSeats - restaurant.spotsA).toFloat() / restaurant.numberOfSeats.toFloat() else 0f
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                                color = FoodGramOrange,
+                                trackColor = Color(0xFFEDF2F7)
+                            )
+                        }
+                    }
                 }
 
                 // Tabs
@@ -204,21 +221,59 @@ fun MenuSection(items: List<MenuItem>) {
         }
         Spacer(modifier = Modifier.height(16.dp))
         items.forEach { item ->
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                AsyncImage(
-                    model = item.image,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Crop
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(80.dp)) {
+                    AsyncImage(
+                        model = item.image,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    if (!item.inStock) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.Black.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    "OUT OF STOCK",
+                                    color = Color.White,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row {
-                        Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(
+                            item.name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = if (item.inStock) Color.Black else Color.Gray
+                        )
                         Spacer(modifier = Modifier.weight(1f))
-                        Text("$${item.price}", fontWeight = FontWeight.Bold, color = FoodGramOrange)
+                        Text(
+                            "$${item.price}",
+                            fontWeight = FontWeight.Bold,
+                            color = if (item.inStock) FoodGramOrange else Color.Gray
+                        )
                     }
-                    Text(item.description, color = Color.Gray, fontSize = 12.sp, maxLines = 2)
+                    Text(
+                        item.description,
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        maxLines = 2
+                    )
                 }
             }
         }

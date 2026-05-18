@@ -12,5 +12,5 @@ data class MenuItemEntity(
     val description: String,
     val image: String,
     val restaurant: String,
-    val inStock: Boolean
+    val availability: Int
 )
