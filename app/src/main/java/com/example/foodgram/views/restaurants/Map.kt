@@ -29,6 +29,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.foodgram.ui.theme.FoodGramOrange
+import com.example.foodgram.views.components.FoodGramNavigationBar
+import com.example.foodgram.views.components.FoodGramScreen
 import com.example.foodgram.viewmodels.map.MapViewModel
 import com.example.foodgram.models.restaurants.MapRestaurant
 import com.google.android.gms.location.LocationServices
@@ -248,14 +250,15 @@ fun MapScreen(
         }
 
         // Bottom Nav
-        Surface(modifier = Modifier.align(Alignment.BottomCenter), shadowElevation = 8.dp) {
-            NavigationBar(containerColor = Color.White) {
-                NavigationBarItem(selected = false, onClick = onNavigateToFeed, icon = { Icon(Icons.AutoMirrored.Filled.List, null) }, label = { Text("FEED") })
-                NavigationBarItem(selected = false, onClick = onNavigateToSearch, icon = { Icon(Icons.Default.Search, null) }, label = { Text("SEARCH") })
-                NavigationBarItem(selected = false, onClick = onNavigateToProfile, icon = { Icon(Icons.Default.Person, null) }, label = { Text("PROFILE") })
-                NavigationBarItem(selected = false, onClick = onNavigateToMenu, icon = { Icon(Icons.Default.Camera, null) }, label = { Text("SCAN") })
-                NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Map, null) }, label = { Text("MAP") })
-            }
+        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+            FoodGramNavigationBar(
+                currentScreen = FoodGramScreen.MAP,
+                onNavigateToFeed = onNavigateToFeed,
+                onNavigateToSearch = onNavigateToSearch,
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToMenu = onNavigateToMenu,
+                onNavigateToMap = { }
+            )
         }
     }
 }

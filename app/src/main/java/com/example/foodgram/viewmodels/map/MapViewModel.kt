@@ -96,6 +96,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         price = price,
         spots = spots,
         spotsA = spotsA,
+        numberOfSeats = numberOfSeats,
+        seatsOccupied = seatsOccupied,
         tags = tags,
         time = time
     )
@@ -117,6 +119,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         price = price,
         spots = spots,
         spotsA = spotsA,
+        numberOfSeats = numberOfSeats,
+        seatsOccupied = seatsOccupied,
         tags = tags,
         time = time
     )

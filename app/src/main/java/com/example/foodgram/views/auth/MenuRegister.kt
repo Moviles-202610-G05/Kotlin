@@ -248,7 +248,7 @@ fun MenuRegisterView(
                         category = category, 
                         description = description, 
                         imageUri = dishImageUri, 
-                        inStock = inStock,
+                        availability = if (inStock) 1 else 0,
                         restaurant = viewModel.form.restaurantName
                     )
                     viewModel.addMenuItemStepByStep(newItem)

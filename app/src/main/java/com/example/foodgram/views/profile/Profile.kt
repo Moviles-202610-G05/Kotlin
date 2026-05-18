@@ -34,6 +34,8 @@ import coil.request.ImageRequest
 import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
 import com.example.foodgram.utils.UserSession
+import com.example.foodgram.views.components.FoodGramNavigationBar
+import com.example.foodgram.views.components.FoodGramScreen
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -138,42 +140,14 @@ fun UserScreen(
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Feed") },
-                    label = { Text("FEED") },
-                    selected = false,
-                    onClick = onNavigateToHome
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    label = { Text("SEARCH") },
-                    selected = false,
-                    onClick = onNavigateToSearch
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("PROFILE") },
-                    selected = true,
-                    onClick = { },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = OrangeFoodGram)
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Camera, contentDescription = "Scan") },
-                    label = { Text("SCAN") },
-                    selected = false,
-                    onClick = onNavigateToMenu
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Place, contentDescription = "Map") },
-                    label = { Text("MAP") },
-                    selected = false,
-                    onClick = { onNavigateToMap(null) }
-                )
-            }
+            FoodGramNavigationBar(
+                currentScreen = FoodGramScreen.PROFILE,
+                onNavigateToFeed = onNavigateToHome,
+                onNavigateToSearch = onNavigateToSearch,
+                onNavigateToProfile = { },
+                onNavigateToMenu = onNavigateToMenu,
+                onNavigateToMap = { onNavigateToMap(null) }
+            )
         }
     ) { paddingValues ->
         Column(

@@ -21,6 +21,8 @@ data class RestaurantEntity(
     val price: String,
     val spots: Long,
     val spotsA: Long,
+    val numberOfSeats: Long,
+    val seatsOccupied: Long,
     val tags: List<String>,
     val time: String
 )

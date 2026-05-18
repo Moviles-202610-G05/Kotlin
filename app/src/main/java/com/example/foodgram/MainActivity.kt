@@ -19,6 +19,7 @@ import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.feed.HomeScreen
 import com.example.foodgram.views.restaurants.MapScreen
 import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
+import com.example.foodgram.views.restaurants.RestaurantMenuManagementScreen
 import com.example.foodgram.views.auth.LoginScreen
 import com.example.foodgram.views.auth.RegistrationTypeView
 import com.example.foodgram.views.RestaurantRegisterView
@@ -80,7 +81,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onContinueClick = { type ->
-                                    if (type == AccountType.OWNER) {
+                                if (type == AccountType.RESTAURANTE) {
                                         navController.navigate(RestaurantRegister)
                                     } else {
                                         navController.navigate(StudentRegister)
@@ -184,9 +185,11 @@ class MainActivity : ComponentActivity() {
                             NutritionGoalsScreen(navController = navController)
                         }
                         composable<Menu> {
-                            TrackerScreen(
-                                onBackClick = { navController.navigateUp() },
-                                onSaveSuccess = { navController.navigate(Home) }
+                            RestaurantMenuManagementScreen(
+                                onNavigateToFeed = { navController.navigate(Home) },
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMap = { navController.navigate(RestaurantsMap()) }
                             )
                         }
                         composable<RestaurantsMap> { backStackEntry ->

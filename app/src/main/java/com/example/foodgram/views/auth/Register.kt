@@ -88,8 +88,8 @@ fun RegistrationTypeView(
             title = "I'm a Restaurant Owner",
             description = "Manage your digital menu, reach hungry foodies, and grow your local business.",
             icon = Icons.Default.Restaurant,
-            isSelected = selectedType == AccountType.OWNER,
-            onClick = { selectedType = AccountType.OWNER }
+            isSelected = selectedType == AccountType.RESTAURANTE,
+            onClick = { selectedType = AccountType.RESTAURANTE }
         )
 
         Spacer(modifier = Modifier.weight(1f))
@@ -168,4 +168,4 @@ fun AccountTypeCard(
     }
 }
 
-enum class AccountType { STUDENT, OWNER }
+enum class AccountType { STUDENT, RESTAURANTE }

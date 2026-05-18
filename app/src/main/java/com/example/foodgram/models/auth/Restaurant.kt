@@ -16,7 +16,7 @@ data class Restaurant(
     val lat: Double = 4.60971,
     val long: Double = -74.08175,
     val spots: Int = 100,
-    val spotsA: Int = 100,
+    val numberOfSeats: Int = 100,
     val badge: String = "NEW",
     val badge2: String = "WELCOME",
     val ownerEmail: String = "",
