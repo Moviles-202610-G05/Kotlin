@@ -13,8 +13,13 @@ import com.example.foodgram.data.local.entities.ReviewEntity
 import com.example.foodgram.models.restaurants.MenuItem
 import com.example.foodgram.models.restaurants.ReviewRestaurant
 import com.example.foodgram.models.restaurants.MapRestaurant
+import com.example.foodgram.services.notifications.AvailabilityNotificationService
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -25,6 +30,9 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
     private val menuItemDao = database.menuItemDao()
     private val reviewDao = database.reviewDao()
     private val fastCache = FastCache
+    private var restaurantListener: ListenerRegistration? = null
+    private var refreshJob: Job? = null
+    private var currentRestaurantId: String? = null
 
     var restaurant by mutableStateOf<MapRestaurant?>(null)
         private set
@@ -38,13 +46,53 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
     var isLoading by mutableStateOf(false)
         private set
 
+    override fun onCleared() {
+        restaurantListener?.remove()
+        refreshJob?.cancel()
+        currentRestaurantId?.let { id ->
+            FirebaseMessaging.getInstance().unsubscribeFromTopic("restaurant_availability_$id")
+        }
+        super.onCleared()
+    }
+
     fun loadRestaurantDetail(restaurantId: String, initialData: MapRestaurant? = null) {
         if (restaurantId.isBlank() || restaurantId == "0") {
             isLoading = false
             return
         }
+
+        // 1. Unsubscribe from previous restaurant if any
+        currentRestaurantId?.let { oldId ->
+            if (oldId != restaurantId) {
+                FirebaseMessaging.getInstance().unsubscribeFromTopic("restaurant_availability_$oldId")
+            }
+        }
+        currentRestaurantId = restaurantId
+
+        // 2. Subscribe to new restaurant availability updates
+        FirebaseMessaging.getInstance().subscribeToTopic("restaurant_availability_$restaurantId")
+
+        // 3. Listen for refresh signals while this VM is active
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            AvailabilityNotificationService.refreshSignals.collectLatest { id ->
+                if (id == restaurantId) {
+                    refreshAvailability(id)
+                }
+            }
+        }
+
+        // Setup real-time listener for restaurant capacity updates (Secondary/Backup)
+        restaurantListener?.remove()
+        restaurantListener = db.collection("restaurants").document(restaurantId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
+                restaurant = snapshot.toObject(MapRestaurant::class.java)?.copy(id = snapshot.id)
+            }
+
         viewModelScope.launch {
             isLoading = true
+            // ... (rest of the loading logic remains same)
 
             // Set initial data if available
             if (initialData != null) {
@@ -57,7 +105,7 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
             if (cachedMenu != null) menuItems = cachedMenu
             if (cachedReviews != null) reviews = cachedReviews
 
-            // If we don't have restaurant details, fetch them first
+            // If we don't have restaurant details, fetch them first (listener will eventually update too)
             if (restaurant == null) {
                 try {
                     val snapshot = db.collection("restaurants").document(restaurantId)
@@ -66,16 +114,6 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                     restaurant = snapshot.toObject(MapRestaurant::class.java)?.copy(id = snapshot.id)
                 } catch (e: Exception) {
                     restaurant = null
-                }
-            } else {
-                // Periodically or on load, refresh restaurant data to get latest seats
-                try {
-                    val snapshot = db.collection("restaurants").document(restaurantId)
-                        .get()
-                        .await()
-                    restaurant = snapshot.toObject(MapRestaurant::class.java)?.copy(id = snapshot.id)
-                } catch (e: Exception) {
-                    // Keep existing if fetch fails
                 }
             }
             
@@ -138,6 +176,17 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
             }
 
             isLoading = false
+        }
+    }
+
+    private fun refreshAvailability(restaurantId: String) {
+        viewModelScope.launch {
+            try {
+                val snapshot = db.collection("restaurants").document(restaurantId).get().await()
+                restaurant = snapshot.toObject(MapRestaurant::class.java)?.copy(id = snapshot.id)
+            } catch (e: Exception) {
+                // Log or handle error
+            }
         }
     }
 

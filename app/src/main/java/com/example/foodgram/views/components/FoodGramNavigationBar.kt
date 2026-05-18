@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.Color
 import com.example.foodgram.utils.UserSession
 
 enum class FoodGramScreen {
-    FEED, SEARCH, PROFILE, MENU, MAP
+    FEED, SEARCH, PROFILE, MENU, MAP, SCAN
 }
 
 @Composable
@@ -46,15 +46,29 @@ fun FoodGramNavigationBar(
             label = { Text("PROFILE") }
         )
         NavigationBarItem(
-            selected = currentScreen == FoodGramScreen.MENU,
+            selected = currentScreen == FoodGramScreen.MENU || currentScreen == FoodGramScreen.SCAN,
             onClick = onNavigateToMenu,
             icon = {
-                Icon(
-                    if (isRestaurante) Icons.Default.Dashboard else Icons.Default.RestaurantMenu,
-                    contentDescription = if (isRestaurante) "Dashboard" else "Menu"
-                )
+                val icon = when {
+                    isRestaurante -> Icons.Default.Dashboard
+                    UserSession.currentUserRole == "ESTUDIANTE" -> Icons.Default.QrCodeScanner
+                    else -> Icons.Default.RestaurantMenu
+                }
+                val description = when {
+                    isRestaurante -> "Dashboard"
+                    UserSession.currentUserRole == "ESTUDIANTE" -> "Scan"
+                    else -> "Menu"
+                }
+                Icon(icon, contentDescription = description)
             },
-            label = { Text(if (isRestaurante) "DASHBOARD" else "MENU") }
+            label = {
+                val label = when {
+                    isRestaurante -> "DASHBOARD"
+                    UserSession.currentUserRole == "ESTUDIANTE" -> "SCAN"
+                    else -> "MENU"
+                }
+                Text(label)
+            }
         )
         NavigationBarItem(
             selected = currentScreen == FoodGramScreen.MAP,

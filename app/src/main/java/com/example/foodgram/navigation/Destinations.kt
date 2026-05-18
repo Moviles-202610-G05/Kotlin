@@ -18,6 +18,9 @@ object Profile
 object Menu
 
 @Serializable
+object Tracker
+
+@Serializable
 data class RestaurantsMap(val restaurantId: String? = null)
 
 @Serializable

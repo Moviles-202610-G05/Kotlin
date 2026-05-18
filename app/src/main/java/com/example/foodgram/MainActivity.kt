@@ -122,10 +122,17 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable<Home> {
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             HomeScreen(
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id -> 
                                     navController.navigate(RestaurantDetail(id))
@@ -135,22 +142,36 @@ class MainActivity : ComponentActivity() {
 
                         composable<RestaurantDetail> { backStackEntry ->
                             val detail: RestaurantDetail = backStackEntry.toRoute()
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             com.example.foodgram.views.restaurants.RestaurantDetailScreen(
                                 restaurantId = detail.id,
                                 onNavigateBack = { navController.navigateUp() },
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) }
                             )
                         }
 
                         composable<Search> {
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             SearchRestaurantsScreen(
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
@@ -159,11 +180,18 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable<Profile> {
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             UserScreen(
                                 navController = navController,
                                 onNavigateToHome = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToOrders = { /* TODO */ },
                                 onNavigateToReviews = { /* TODO */ },
@@ -192,14 +220,27 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToMap = { navController.navigate(RestaurantsMap()) }
                             )
                         }
+                        composable<Tracker> {
+                            TrackerScreen(
+                                onBackClick = { navController.navigateUp() },
+                                onSaveSuccess = { navController.navigate(Home) }
+                            )
+                        }
                         composable<RestaurantsMap> { backStackEntry ->
                             val mapRoute: RestaurantsMap = backStackEntry.toRoute()
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             MapScreen(
                                 restaurantId = mapRoute.restaurantId,
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
                                 }
