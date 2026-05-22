@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -18,6 +19,7 @@ import com.example.foodgram.ui.theme.FoodGramTheme
 import com.example.foodgram.views.feed.HomeScreen
 import com.example.foodgram.views.restaurants.MapScreen
 import com.example.foodgram.views.restaurants.SearchRestaurantsScreen
+import com.example.foodgram.views.restaurants.RestaurantMenuManagementScreen
 import com.example.foodgram.views.auth.LoginScreen
 import com.example.foodgram.views.auth.RegistrationTypeView
 import com.example.foodgram.views.RestaurantRegisterView
@@ -30,21 +32,27 @@ import com.example.foodgram.viewmodels.auth.RestaurantRegisterViewModel
 import com.example.foodgram.views.auth.ForgotPasswordScreen
 import com.example.foodgram.views.settings.NutritionGoalsScreen
 import com.example.foodgram.views.tracker.TrackerScreen
+import com.example.foodgram.utils.UserSession
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        UserSession.init(this)
+        
         enableEdgeToEdge()
         setContent {
             FoodGramTheme {
                 val navController = rememberNavController()
                 val restaurantViewModel: RestaurantRegisterViewModel = viewModel()
 
+                // Simplicidad máxima para evitar bloqueos en el Main Thread
+                val startDest = if (UserSession.currentUserUid != null) Home else Login
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = Login,
+                        startDestination = startDest,
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable<Login> {
@@ -73,7 +81,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onContinueClick = { type ->
-                                    if (type == AccountType.OWNER) {
+                                if (type == AccountType.RESTAURANTE) {
                                         navController.navigate(RestaurantRegister)
                                     } else {
                                         navController.navigate(StudentRegister)
@@ -114,10 +122,17 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable<Home> {
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             HomeScreen(
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id -> 
                                     navController.navigate(RestaurantDetail(id))
@@ -127,22 +142,36 @@ class MainActivity : ComponentActivity() {
 
                         composable<RestaurantDetail> { backStackEntry ->
                             val detail: RestaurantDetail = backStackEntry.toRoute()
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             com.example.foodgram.views.restaurants.RestaurantDetailScreen(
                                 restaurantId = detail.id,
                                 onNavigateBack = { navController.navigateUp() },
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) }
                             )
                         }
 
                         composable<Search> {
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             SearchRestaurantsScreen(
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
@@ -151,11 +180,18 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable<Profile> {
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             UserScreen(
                                 navController = navController,
                                 onNavigateToHome = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToOrders = { /* TODO */ },
                                 onNavigateToReviews = { /* TODO */ },
@@ -163,6 +199,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToNutritionGoals = { navController.navigate(NutritionGoals) },
                                 onNavigateToPrivacySettings = { /* TODO */ },
                                 onLogout = {
+                                    UserSession.logout()
                                     navController.navigate(Login) {
                                         popUpTo(0) { inclusive = true }
                                     }
@@ -176,6 +213,14 @@ class MainActivity : ComponentActivity() {
                             NutritionGoalsScreen(navController = navController)
                         }
                         composable<Menu> {
+                            RestaurantMenuManagementScreen(
+                                onNavigateToFeed = { navController.navigate(Home) },
+                                onNavigateToSearch = { navController.navigate(Search) },
+                                onNavigateToProfile = { navController.navigate(Profile) },
+                                onNavigateToMap = { navController.navigate(RestaurantsMap()) }
+                            )
+                        }
+                        composable<Tracker> {
                             TrackerScreen(
                                 onBackClick = { navController.navigateUp() },
                                 onSaveSuccess = { navController.navigate(Home) }
@@ -183,12 +228,19 @@ class MainActivity : ComponentActivity() {
                         }
                         composable<RestaurantsMap> { backStackEntry ->
                             val mapRoute: RestaurantsMap = backStackEntry.toRoute()
+                            val navigateToMenuOrScan = {
+                                if (UserSession.currentUserRole == "RESTAURANTE") {
+                                    navController.navigate(Menu)
+                                } else {
+                                    navController.navigate(Tracker)
+                                }
+                            }
                             MapScreen(
                                 restaurantId = mapRoute.restaurantId,
                                 onNavigateToFeed = { navController.navigate(Home) },
                                 onNavigateToSearch = { navController.navigate(Search) },
                                 onNavigateToProfile = { navController.navigate(Profile) },
-                                onNavigateToMenu = { navController.navigate(Menu) },
+                                onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
                                 }

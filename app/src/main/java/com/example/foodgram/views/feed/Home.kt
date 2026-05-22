@@ -26,7 +26,9 @@ import com.example.foodgram.ui.theme.FoodGramOrange
 import com.example.foodgram.viewmodels.feed.FeedViewModel
 import com.example.foodgram.models.feed.Post
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
+import com.example.foodgram.views.components.FoodGramNavigationBar
+import com.example.foodgram.views.components.FoodGramScreen
 
 fun formatTimestamp(timestamp: com.google.firebase.Timestamp?): String {
     if (timestamp == null) return ""
@@ -77,38 +79,14 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Feed") },
-                    label = { Text("FEED") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToSearch,
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                    label = { Text("SEARCH") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToProfile,
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("PROFILE") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onNavigateToMenu,
-                    icon = { Icon(Icons.Default.Camera, contentDescription = "Scan") },
-                    label = { Text("SCAN") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = { onNavigateToMap(null) },
-                    icon = { Icon(Icons.Default.Place, contentDescription = "Map") },
-                    label = { Text("MAP") }
-                )
-            }
+            FoodGramNavigationBar(
+                currentScreen = FoodGramScreen.FEED,
+                onNavigateToFeed = { },
+                onNavigateToSearch = onNavigateToSearch,
+                onNavigateToProfile = onNavigateToProfile,
+                onNavigateToMenu = onNavigateToMenu,
+                onNavigateToMap = { onNavigateToMap(null) }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(

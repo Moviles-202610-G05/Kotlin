@@ -43,14 +43,7 @@ import com.example.foodgram.views.SectionHeader
 import java.io.File
 import java.io.FileOutputStream
 
-data class MenuItem(
-    val name: String,
-    val price: String,
-    val category: String,
-    val description: String,
-    val imageUri: Uri? = null,
-    val inStock: Boolean = true
-)
+import com.example.foodgram.models.restaurants.MenuItem
 
 @Composable
 fun MenuRegisterView(
@@ -249,11 +242,24 @@ fun MenuRegisterView(
         Button(
             onClick = {
                 if (dishName.isNotBlank() && price.isNotBlank()) {
-                    menuItems.add(MenuItem(dishName, price, category, description, dishImageUri, inStock))
+                    val newItem = MenuItem(
+                        name = dishName, 
+                        price = price, 
+                        category = category, 
+                        description = description, 
+                        imageUri = dishImageUri, 
+                        availability = if (inStock) 1 else 0,
+                        restaurant = viewModel.form.restaurantName
+                    )
+                    viewModel.addMenuItemStepByStep(newItem)
+                    
+                    // Limpiar campos para el siguiente plato
                     dishName = ""
                     price = ""
                     description = ""
                     dishImageUri = null
+                } else {
+                    viewModel.errorMessage = "Dish name and price are required"
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -408,7 +414,10 @@ fun DishPhotoUploadBox(
 
 @Composable
 fun SimpleCategoryDropdown(selectedCategory: String, onCategorySelected: (String) -> Unit) {
-    val categories = listOf("Main Course", "Appetizer", "Dessert", "Beverage")
+    val categories = listOf(
+        "Main Course", "Appetizers", "Soups", "Salads", 
+        "Desserts", "Beverages", "Breakfast", "Fast Food", "Vegan"
+    )
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -416,17 +425,39 @@ fun SimpleCategoryDropdown(selectedCategory: String, onCategorySelected: (String
             value = selectedCategory,
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
-            trailingIcon = { Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null) },
+            // Usamos un Box encima o deshabilitamos los eventos internos para que el clickable del Box funcione
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = { 
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null)
+                }
+            },
             shape = RoundedCornerShape(28.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = Color.LightGray.copy(alpha = 0.5f),
                 focusedBorderColor = Color(0xFFFF7043)
             )
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        // Capa invisible encima para capturar el clic en toda el área
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable { expanded = !expanded }
+        )
+        
+        DropdownMenu(
+            expanded = expanded, 
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.5f) // Ajusta el ancho si es necesario
+        ) {
             categories.forEach { cat ->
-                DropdownMenuItem(text = { Text(cat) }, onClick = { onCategorySelected(cat); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(cat) }, 
+                    onClick = { 
+                        onCategorySelected(cat)
+                        expanded = false 
+                    }
+                )
             }
         }
     }
@@ -461,9 +492,21 @@ fun MenuListItem(item: MenuItem) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("\u0024{item.price} • \u0024{item.category}", color = Color.Gray, fontSize = 12.sp)
+                Text("$ ${item.price} • ${item.category}", color = Color.Gray, fontSize = 12.sp)
             }
-            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = if (item.inStock) Color(0xFF4CAF50) else Color(0xFFC5CAE9))
+            if (item.isUploading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = Color(0xFFFF7043),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    Icons.Default.CheckCircle, 
+                    contentDescription = null, 
+                    tint = if (item.inStock) Color(0xFF4CAF50) else Color(0xFFC5CAE9)
+                )
+            }
         }
     }
 }

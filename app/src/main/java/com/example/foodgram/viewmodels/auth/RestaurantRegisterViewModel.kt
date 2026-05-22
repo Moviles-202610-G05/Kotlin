@@ -6,7 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.example.foodgram.views.auth.MenuItem
+import com.example.foodgram.models.restaurants.MenuItem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -105,6 +105,48 @@ class RestaurantRegisterViewModel : ViewModel() {
     var isLoading by mutableStateOf(false)
         private set
     var errorMessage by mutableStateOf<String?>(null)
+
+    fun addMenuItemStepByStep(item: MenuItem) {
+        val index = menuItems.size
+        // 1. Añadir localmente con estado de carga
+        val temporaryItem = item.copy(isUploading = true)
+        menuItems.add(temporaryItem)
+
+        // 2. Iniciar subida de imagen y registro en Firestore
+        uploadImage(item.imageUri, "menu") { imageUrl ->
+            val finalImageUrl = imageUrl ?: ""
+            val menuData = hashMapOf(
+                "name" to item.name,
+                "price" to item.price,
+                "description" to item.description,
+                "category" to item.category,
+                "image" to finalImageUrl,
+                "restaurant" to form.restaurantName,
+                "availability" to (if (item.inStock) 1 else 0)
+            )
+
+            // Guardar en Firestore
+            db.collection("menu").add(menuData)
+                .addOnSuccessListener { docRef ->
+                    // Actualizar el item en la lista local para quitar el loading
+                    val updatedItem = temporaryItem.copy(
+                        id = docRef.id,
+                        image = finalImageUrl,
+                        isUploading = false
+                    )
+                    if (index < menuItems.size) {
+                        menuItems[index] = updatedItem
+                    }
+                }
+                .addOnFailureListener {
+                    errorMessage = "Failed to register dish: ${it.localizedMessage}"
+                    // Marcar como fallido o permitir reintento
+                    if (index < menuItems.size) {
+                        menuItems[index] = temporaryItem.copy(isUploading = false)
+                    }
+                }
+        }
+    }
 
     fun finishRegistration(onSuccess: () -> Unit) {
         if (form.restaurantName.isBlank() || form.username.isBlank() || form.password.isBlank()) {

@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -40,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import com.example.foodgram.models.tracker.MealHistoryItem
 import java.util.Locale
 import com.example.foodgram.ui.theme.OrangeFoodGram
@@ -118,6 +121,7 @@ fun TrackerScreen(
             // Image Preview / Selector (Improved UI)
             PhotoUploadBox(
                 imageUri = selectedImageUri,
+                isLoading = viewModel.isLoading,
                 onImageSelected = { uri ->
                     selectedImageUri = uri
                     uri?.let { viewModel.analyzeImage(context, it) }
@@ -151,11 +155,22 @@ fun TrackerScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = OrangeFoodGram)
+                    colors = ButtonDefaults.buttonColors(containerColor = OrangeFoodGram),
+                    enabled = !viewModel.isSaving
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save to My History", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    if (viewModel.isSaving) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Saving...", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save to My History", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -215,9 +230,16 @@ fun HistoryItem(meal: MealHistoryItem) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Meal Image
+            // Meal Image con Cache y Placeholder
             Image(
-                painter = rememberAsyncImagePainter(meal.imagePath),
+                painter = rememberAsyncImagePainter(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(meal.imagePath)
+                        .crossfade(true)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .build()
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .size(60.dp)
@@ -329,6 +351,7 @@ fun AnalysisResultCard(result: com.example.foodgram.models.tracker.MealAnalysis)
 @Composable
 fun PhotoUploadBox(
     imageUri: Uri?,
+    isLoading: Boolean,
     onImageSelected: (Uri?) -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
@@ -365,7 +388,7 @@ fun PhotoUploadBox(
         }
     }
 
-    if (showDialog) {
+    if (showDialog && !isLoading) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("Select Food Photo", fontWeight = FontWeight.Bold) },
@@ -392,7 +415,7 @@ fun PhotoUploadBox(
                         }
                         showDialog = false 
                     },
-                    border = borderStroke(1.dp, OrangeFoodGram)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, OrangeFoodGram)
                 ) {
                     Text("Camera", color = OrangeFoodGram)
                 }
@@ -405,17 +428,17 @@ fun PhotoUploadBox(
             .fillMaxWidth()
             .height(220.dp)
             .background(
-                color = OrangeFoodGram.copy(alpha = 0.05f),
+                color = if (isLoading) Color.LightGray.copy(alpha = 0.1f) else OrangeFoodGram.copy(alpha = 0.05f),
                 shape = RoundedCornerShape(24.dp)
             )
-            .clickable { showDialog = true }
+            .clickable(enabled = !isLoading) { showDialog = true }
             .drawBehind {
                 val stroke = Stroke(
                     width = 2f,
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
                 )
                 drawRoundRect(
-                    color = OrangeFoodGram.copy(alpha = 0.4f),
+                    color = if (isLoading) Color.Gray.copy(alpha = 0.4f) else OrangeFoodGram.copy(alpha = 0.4f),
                     style = stroke,
                     cornerRadius = CornerRadius(24.dp.toPx())
                 )
@@ -424,31 +447,51 @@ fun PhotoUploadBox(
     ) {
         if (imageUri != null) {
             Image(
-                painter = rememberAsyncImagePainter(imageUri),
+                painter = rememberAsyncImagePainter(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imageUri)
+                        .crossfade(true)
+                        .build()
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp)
-                    .clip(RoundedCornerShape(20.dp)),
+                    .clip(RoundedCornerShape(20.dp))
+                    .then(if (isLoading) Modifier.alpha(0.5f) else Modifier),
                 contentScale = ContentScale.Crop
             )
+            if (isLoading) {
+                CircularProgressIndicator(color = OrangeFoodGram)
+            }
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
                         .size(64.dp)
-                        .background(OrangeFoodGram.copy(alpha = 0.1f), CircleShape),
+                        .background(
+                            if (isLoading) Color.Gray.copy(alpha = 0.1f) else OrangeFoodGram.copy(alpha = 0.1f), 
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.CloudUpload, 
-                        contentDescription = null, 
-                        tint = OrangeFoodGram, 
-                        modifier = Modifier.size(32.dp)
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(32.dp), color = Color.Gray)
+                    } else {
+                        Icon(
+                            Icons.Default.CloudUpload, 
+                            contentDescription = null, 
+                            tint = OrangeFoodGram, 
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Upload Meal Photo", color = OrangeFoodGram, fontWeight = FontWeight.Bold)
+                Text(
+                    if (isLoading) "Processing..." else "Upload Meal Photo", 
+                    color = if (isLoading) Color.Gray else OrangeFoodGram, 
+                    fontWeight = FontWeight.Bold
+                )
                 Text("Analyze calories & nutrients instantly", color = Color.Gray, fontSize = 12.sp)
             }
         }
