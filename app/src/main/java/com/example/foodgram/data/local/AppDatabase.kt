@@ -10,9 +10,10 @@ import com.example.foodgram.data.local.entities.*
         RestaurantEntity::class,
         MenuItemEntity::class,
         PostEntity::class,
-        ReviewEntity::class
+        ReviewEntity::class,
+        PendingMealEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -21,6 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun menuItemDao(): MenuItemDao
     abstract fun postDao(): PostDao
     abstract fun reviewDao(): ReviewDao
+    abstract fun pendingMealDao(): PendingMealDao
 
     companion object {
         @Volatile
