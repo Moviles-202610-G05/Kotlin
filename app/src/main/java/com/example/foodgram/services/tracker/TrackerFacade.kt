@@ -5,12 +5,16 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
+import com.example.foodgram.data.local.AppDatabase
+import com.example.foodgram.data.local.entities.PendingMealEntity
 import com.example.foodgram.models.tracker.MealAnalysis
 import com.example.foodgram.models.tracker.MealHistoryItem
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -22,6 +26,39 @@ class TrackerFacade(
     private val storage: FirebaseStorage = FirebaseStorage.getInstance(),
     private val gson: Gson = Gson()
 ) {
+
+    // Called by PendingMealWorker so offline-queued meals can be analysed without a Uri
+    suspend fun analyzeFromBase64(base64Image: String): MealAnalysis {
+        val request = OpenRouterRequest(
+            messages = listOf(
+                Message(role = "system", content = listOf(MessageContent(type = "text", text = SYSTEM_PROMPT))),
+                Message(
+                    role = "user",
+                    content = listOf(
+                        MessageContent(type = "text", text = "Analyze this meal. Return ONLY the JSON object. No conversational text. No markdown blocks."),
+                        MessageContent(type = "image_url", imageUrl = ImageUrl(url = "data:image/jpeg;base64,$base64Image"))
+                    )
+                )
+            )
+        )
+        val response = OpenRouterClient.api.analyzeImage(API_KEY, request = request)
+        val content = response.choices.firstOrNull()?.message?.content ?: ""
+        return gson.fromJson(extractAndNormalizeJson(content), MealAnalysis::class.java)
+    }
+
+    // Saves the image as base64 into the local Room pending queue when offline.
+    // Image encoding runs on Dispatchers.Default (CPU-bound); DB insert on Dispatchers.IO.
+    suspend fun saveOffline(context: Context, imageUri: Uri) {
+        val base64Image = withContext(Dispatchers.Default) {
+            encodeImageToBase64(context, imageUri)
+        }
+        val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.getDefault()).format(Date())
+        withContext(Dispatchers.IO) {
+            AppDatabase.getDatabase(context)
+                .pendingMealDao()
+                .insert(PendingMealEntity(imageBase64 = base64Image, timestamp = timestamp))
+        }
+    }
 
     suspend fun analyzeMeal(context: Context, imageUri: Uri): MealAnalysis {
         val base64Image = encodeImageToBase64(context, imageUri)
