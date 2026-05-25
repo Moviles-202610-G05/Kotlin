@@ -1,64 +1,109 @@
 package com.example.foodgram.viewmodels.tracker
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.app.Application
 import android.net.Uri
-import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.foodgram.data.local.AppDatabase
 import com.example.foodgram.models.tracker.MealAnalysis
 import com.example.foodgram.models.tracker.MealHistoryItem
+import com.example.foodgram.services.tracker.NetworkConnectivityObserver
+import com.example.foodgram.services.tracker.PendingMealWorker
 import com.example.foodgram.services.tracker.TrackerFacade
 import com.example.foodgram.utils.UserSession
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class TrackerViewModel(
+    application: Application,
     private val trackerFacade: TrackerFacade = TrackerFacade()
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     var isLoading by mutableStateOf(false)
     var isSaving by mutableStateOf(false)
     var analysisResult by mutableStateOf<MealAnalysis?>(null)
     var errorMessage by mutableStateOf<String?>(null)
+    var isOfflineSaved by mutableStateOf(false)
 
     private var currentImageUri: Uri? = null
 
     var mealHistory = mutableStateOf<List<MealHistoryItem>>(emptyList())
     var isHistoryLoading by mutableStateOf(false)
 
-    fun analyzeImage(context: Context, imageUri: Uri) {
+    // Reactive count of queued offline meals — drives the UI chip
+    val pendingCount = AppDatabase.getDatabase(application)
+        .pendingMealDao()
+        .observePendingCount()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    private val connectivityObserver = NetworkConnectivityObserver(application)
+
+    // Mutex prevents two concurrent offline saves from racing on the DB
+    private val offlineSaveMutex = Mutex()
+
+    init {
+        // When the network comes back online and there are queued meals, fire WorkManager.
+        // WorkManager itself enforces CONNECTED constraint, so enqueue is safe to call eagerly.
         viewModelScope.launch {
-            // 1. Iniciamos en el Main Thread para bloquear la UI inmediatamente
-            isLoading = true 
+            connectivityObserver.isOnline.collect { online ->
+                if (online && pendingCount.value > 0) {
+                    UserSession.currentUserEmail?.let { email ->
+                        PendingMealWorker.enqueue(getApplication(), email)
+                    }
+                }
+            }
+        }
+    }
+
+    fun analyzeImage(context: android.content.Context, imageUri: Uri) {
+        viewModelScope.launch {
+            isLoading = true
             errorMessage = null
             analysisResult = null
 
             try {
-                // 2. Saltamos a un hilo de IO para el procesamiento pesado de la IA y fotos
+                val isOnline = connectivityObserver.isCurrentlyOnline()
+
+                if (!isOnline) {
+                    // Offline path: encode + queue, then return early.
+                    // offlineSaveMutex guards against rapid double-taps writing duplicate rows.
+                    offlineSaveMutex.withLock {
+                        withContext(Dispatchers.IO) {
+                            trackerFacade.saveOffline(context, imageUri)
+                        }
+                    }
+                    isOfflineSaved = true
+                    // Auto-dismiss the banner after 4 s
+                    launch {
+                        kotlinx.coroutines.delay(4_000)
+                        isOfflineSaved = false
+                    }
+                    return@launch
+                }
+
+                // Online path (unchanged from before)
                 val result = withContext(Dispatchers.IO) {
                     trackerFacade.analyzeMeal(context, imageUri)
                 }
-                
-                // 3. Volvemos al Main (automático) para guardar el resultado
                 analysisResult = result
                 currentImageUri = imageUri
             } catch (e: Exception) {
                 errorMessage = "Analysis failed: ${e.localizedMessage}"
             } finally {
-                // 4. Desbloqueamos el botón en el Main
                 isLoading = false
             }
         }
     }
 
     fun saveMealToHistory(onSuccess: () -> Unit) {
-        // 1. Evitar duplicados: Si ya está guardando o no hay resultados, salir.
         if (isSaving || analysisResult == null) return
 
         val userEmail = UserSession.currentUserEmail ?: return
@@ -69,16 +114,11 @@ class TrackerViewModel(
             isSaving = true
             try {
                 val userId = UserSession.currentUserUid ?: "unknown"
-                
-                // 2. Ejecutar el guardado (Firestore/Storage) en hilo de IO
                 withContext(Dispatchers.IO) {
                     trackerFacade.saveMealToHistory(userEmail, userId, result, imageUri)
                 }
-
-                // 3. Limpiar el resultado actual para que no se pueda volver a guardar el mismo
-                analysisResult = null 
+                analysisResult = null
                 currentImageUri = null
-
                 fetchMealHistory()
                 onSuccess()
             } catch (e: Exception) {

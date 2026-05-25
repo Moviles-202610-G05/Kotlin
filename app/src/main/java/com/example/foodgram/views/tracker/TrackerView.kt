@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import androidx.compose.runtime.collectAsState
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.example.foodgram.models.tracker.MealHistoryItem
@@ -61,7 +62,8 @@ fun TrackerScreen(
 ) {
     val context = LocalContext.current
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    
+    val pendingCount by viewModel.pendingCount.collectAsState()
+
     LaunchedEffect(Unit) {
         viewModel.fetchMealHistory()
     }
@@ -114,6 +116,38 @@ fun TrackerScreen(
                     tint = OrangeFoodGram,
                     modifier = Modifier.size(32.dp)
                 )
+            }
+
+            // Offline-saved one-shot banner
+            if (viewModel.isOfflineSaved) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFF3E0), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.WifiOff, contentDescription = null, tint = OrangeFoodGram, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("No internet — meal saved offline. Will sync automatically.", fontSize = 13.sp, color = Color(0xFFE65100))
+                }
+            }
+
+            // Persistent pending-sync chip
+            if (pendingCount > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFE3F2FD), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Sync, contentDescription = null, tint = Color(0xFF1565C0), modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("$pendingCount meal${if (pendingCount > 1) "s" else ""} queued — will sync when connected.", fontSize = 13.sp, color = Color(0xFF1565C0))
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
