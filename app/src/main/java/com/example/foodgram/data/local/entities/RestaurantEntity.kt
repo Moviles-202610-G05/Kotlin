@@ -24,5 +24,6 @@ data class RestaurantEntity(
     val numberOfSeats: Long,
     val seatsOccupied: Long,
     val tags: List<String>,
-    val time: String
+    val time: String,
+    val cachedAt: Long = 0L
 )
