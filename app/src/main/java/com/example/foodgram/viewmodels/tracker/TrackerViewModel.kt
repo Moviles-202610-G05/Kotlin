@@ -16,13 +16,14 @@ import com.example.foodgram.services.tracker.TrackerFacade
 import com.example.foodgram.utils.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class TrackerViewModel(
+class TrackerViewModel @JvmOverloads constructor(
     application: Application,
     private val trackerFacade: TrackerFacade = TrackerFacade()
 ) : AndroidViewModel(application) {
@@ -50,16 +51,17 @@ class TrackerViewModel(
     private val offlineSaveMutex = Mutex()
 
     init {
-        // When the network comes back online and there are queued meals, fire WorkManager.
-        // WorkManager itself enforces CONNECTED constraint, so enqueue is safe to call eagerly.
+        // Re-enqueue any meals left over from previous sessions (e.g. app restarted while offline).
+        // WorkManager's CONNECTED constraint holds the job until network is available — no need to
+        // wait for a connectivity change event here.
         viewModelScope.launch {
-            connectivityObserver.isOnline.collect { online ->
-                if (online && pendingCount.value > 0) {
+            pendingCount
+                .filter { it > 0 }
+                .collect {
                     UserSession.currentUserEmail?.let { email ->
                         PendingMealWorker.enqueue(getApplication(), email)
                     }
                 }
-            }
         }
     }
 
@@ -79,6 +81,11 @@ class TrackerViewModel(
                         withContext(Dispatchers.IO) {
                             trackerFacade.saveOffline(context, imageUri)
                         }
+                    }
+                    // Enqueue immediately — WorkManager defers execution until CONNECTED.
+                    // This is the primary trigger; the init block handles the app-restart case.
+                    UserSession.currentUserEmail?.let { email ->
+                        PendingMealWorker.enqueue(getApplication(), email)
                     }
                     isOfflineSaved = true
                     // Auto-dismiss the banner after 4 s
