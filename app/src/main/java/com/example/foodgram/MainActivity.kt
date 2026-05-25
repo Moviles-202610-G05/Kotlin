@@ -25,6 +25,7 @@ import com.example.foodgram.views.auth.RegistrationTypeView
 import com.example.foodgram.views.RestaurantRegisterView
 import com.example.foodgram.views.auth.AccountType
 import com.example.foodgram.views.profile.UserScreen
+import com.example.foodgram.views.profile.UserReviewsScreen
 import com.example.foodgram.views.settings.PersonalInfoSettings
 import com.example.foodgram.views.auth.MenuRegisterView
 import com.example.foodgram.views.auth.StudentRegisterScreen
@@ -34,19 +35,17 @@ import com.example.foodgram.views.settings.NutritionGoalsScreen
 import com.example.foodgram.views.tracker.TrackerScreen
 import com.example.foodgram.utils.UserSession
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         UserSession.init(this)
-        
+
         enableEdgeToEdge()
         setContent {
             FoodGramTheme {
                 val navController = rememberNavController()
                 val restaurantViewModel: RestaurantRegisterViewModel = viewModel()
 
-                // Simplicidad máxima para evitar bloqueos en el Main Thread
                 val startDest = if (UserSession.currentUserUid != null) Home else Login
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -65,7 +64,7 @@ class MainActivity : ComponentActivity() {
                         composable<ForgotPassword> {
                             ForgotPasswordScreen(
                                 onBackClick = { navController.navigateUp() },
-                                onResetSuccess = { 
+                                onResetSuccess = {
                                     navController.navigate(Login) {
                                         popUpTo(ForgotPassword) { inclusive = true }
                                     }
@@ -75,13 +74,13 @@ class MainActivity : ComponentActivity() {
                         composable<Register> {
                             RegistrationTypeView(
                                 onBackClick = { navController.navigateUp() },
-                                onLoginClick = { 
+                                onLoginClick = {
                                     navController.navigate(Login) {
                                         popUpTo(Login) { inclusive = true }
                                     }
                                 },
                                 onContinueClick = { type ->
-                                if (type == AccountType.RESTAURANTE) {
+                                    if (type == AccountType.RESTAURANTE) {
                                         navController.navigate(RestaurantRegister)
                                     } else {
                                         navController.navigate(StudentRegister)
@@ -106,12 +105,12 @@ class MainActivity : ComponentActivity() {
                                 onAddMenuClick = { navController.navigate(MenuRegister) }
                             )
                         }
-                        
+
                         composable<MenuRegister> {
                             MenuRegisterView(
                                 viewModel = restaurantViewModel,
                                 onBackClick = { navController.navigateUp() },
-                                onFinishClick = { 
+                                onFinishClick = {
                                     restaurantViewModel.finishRegistration {
                                         navController.navigate(Home) {
                                             popUpTo(Login) { inclusive = true }
@@ -134,7 +133,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToProfile = { navController.navigate(Profile) },
                                 onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
-                                onNavigateToRestaurantDetail = { id -> 
+                                onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
                                 }
                             )
@@ -194,7 +193,10 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToMenu = navigateToMenuOrScan,
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToOrders = { /* TODO */ },
-                                onNavigateToReviews = { /* TODO */ },
+                                // Hooking up the Navigation to Reviews!
+                                onNavigateToReviews = {
+                                    navController.navigate(UserReviews(UserSession.currentUserDocId ?: ""))
+                                },
                                 onNavigateToSaved = { /* TODO */ },
                                 onNavigateToNutritionGoals = { navController.navigate(NutritionGoals) },
                                 onNavigateToPrivacySettings = { /* TODO */ },
@@ -206,8 +208,18 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        // NEW COMPOSABLE: User Reviews View
+                        composable<UserReviews> { backStackEntry ->
+                            val reviewsRoute: UserReviews = backStackEntry.toRoute()
+                            UserReviewsScreen(
+                                userId = reviewsRoute.userId,
+                                onBackClick = { navController.navigateUp() }
+                            )
+                        }
+
                         composable<PersonalInfo> {
-                                PersonalInfoSettings(navController = navController)
+                            PersonalInfoSettings(navController = navController)
                         }
                         composable<NutritionGoals> {
                             NutritionGoalsScreen(navController = navController)

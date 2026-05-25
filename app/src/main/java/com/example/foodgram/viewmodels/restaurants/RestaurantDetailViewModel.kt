@@ -14,15 +14,21 @@ import com.example.foodgram.models.restaurants.MenuItem
 import com.example.foodgram.models.restaurants.ReviewRestaurant
 import com.example.foodgram.models.restaurants.MapRestaurant
 import com.example.foodgram.services.notifications.AvailabilityNotificationService
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 
 class RestaurantDetailViewModel(application: Application) : AndroidViewModel(application) {
     private val db = FirebaseFirestore.getInstance()
@@ -55,13 +61,74 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
         super.onCleared()
     }
 
+    // MULTI-THREADING & EVENTUAL CONNECTIVITY STRATEGY
+    fun submitReview(rating: Int, comment: String, userId: String, userName: String, avatarUrl: String?) {
+        val currentRestaurant = restaurant ?: return
+        val currentRestaurantId = currentRestaurant.id
+
+        // Use Coroutines (Dispatchers.IO) for background thread operations
+        viewModelScope.launch(Dispatchers.IO) {
+            val newReview = ReviewRestaurant(
+                id = UUID.randomUUID().toString(),
+                restaurant = currentRestaurant.name,
+                userId = userId,
+                name = userName,
+                rating = rating,
+                comment = comment,
+                date = SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date()),
+                avatar = avatarUrl ?: "",
+                avatarColor = "#FF9800", // Default FoodGram Orange
+                createdAt = com.google.firebase.Timestamp.now()
+            )
+
+            // 1. OPTIMISTIC UI UPDATE & CACHING
+            val updatedReviews = reviews.toMutableList()
+            updatedReviews.add(0, newReview) // Add to top
+
+            launch(Dispatchers.Main) {
+                reviews = updatedReviews
+            }
+            fastCache.put("reviews_$currentRestaurantId", updatedReviews)
+
+            // 2. LOCAL STORAGE (ROOM)
+            reviewDao.insertReview(newReview.toEntity())
+
+            // 3. EVENTUAL CONNECTIVITY / SYNC TO FIREBASE
+            try {
+                val batch = db.batch()
+
+                // Save the review
+                val reviewRef = db.collection("reviews").document(newReview.id)
+                batch.set(reviewRef, newReview)
+
+                // Update restaurant aggregated data (Average rating and total reviews)
+                val restRef = db.collection("restaurants").document(currentRestaurantId)
+                val newTotalReviews = currentRestaurant.nuberReviews + 1
+                val newAverageRating = ((currentRestaurant.rating * currentRestaurant.nuberReviews) + rating) / newTotalReviews
+                batch.update(restRef, "nuberReviews", newTotalReviews)
+                batch.update(restRef, "rating", newAverageRating)
+
+                // Update user review counter
+                if (userId.isNotEmpty()) {
+                    val userRef = db.collection("user").document(userId)
+                    batch.update(userRef, "reviewsCount", FieldValue.increment(1))
+                }
+
+                batch.commit().await()
+            } catch (e: Exception) {
+                // If it fails, data is already saved locally in Room and will be read on next load.
+                // A complete eventual connectivity system would flag this row in Room to retry later.
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun loadRestaurantDetail(restaurantId: String, initialData: MapRestaurant? = null) {
         if (restaurantId.isBlank() || restaurantId == "0") {
             isLoading = false
             return
         }
 
-        // 1. Unsubscribe from previous restaurant if any
         currentRestaurantId?.let { oldId ->
             if (oldId != restaurantId) {
                 FirebaseMessaging.getInstance().unsubscribeFromTopic("restaurant_availability_$oldId")
@@ -69,10 +136,8 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
         }
         currentRestaurantId = restaurantId
 
-        // 2. Subscribe to new restaurant availability updates
         FirebaseMessaging.getInstance().subscribeToTopic("restaurant_availability_$restaurantId")
 
-        // 3. Listen for refresh signals while this VM is active
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             AvailabilityNotificationService.refreshSignals.collectLatest { id ->
@@ -82,7 +147,6 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
             }
         }
 
-        // Setup real-time listener for restaurant capacity updates (Secondary/Backup)
         restaurantListener?.remove()
         restaurantListener = db.collection("restaurants").document(restaurantId)
             .addSnapshotListener { snapshot, error ->
@@ -92,20 +156,16 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
 
         viewModelScope.launch {
             isLoading = true
-            // ... (rest of the loading logic remains same)
 
-            // Set initial data if available
             if (initialData != null) {
                 restaurant = initialData
             }
 
-            // 1. FastCache check
             val cachedMenu = fastCache.get("menu_$restaurantId") as? List<MenuItem>
             val cachedReviews = fastCache.get("reviews_$restaurantId") as? List<ReviewRestaurant>
             if (cachedMenu != null) menuItems = cachedMenu
             if (cachedReviews != null) reviews = cachedReviews
 
-            // If we don't have restaurant details, fetch them first (listener will eventually update too)
             if (restaurant == null) {
                 try {
                     val snapshot = db.collection("restaurants").document(restaurantId)
@@ -116,11 +176,10 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                     restaurant = null
                 }
             }
-            
+
             val restaurantName = restaurant?.name ?: ""
-            
+
             if (restaurantName.isNotEmpty()) {
-                // 2. Room check if empty
                 if (menuItems.isEmpty()) {
                     val localMenu = menuItemDao.getMenuItemsByRestaurant(restaurantName).first()
                     if (localMenu.isNotEmpty()) menuItems = localMenu.map { it.toMenuItem() }
@@ -130,7 +189,6 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                     if (localReviews.isNotEmpty()) reviews = localReviews.map { it.toReviewRestaurant() }
                 }
 
-                // 3. Firebase fetch
                 val menuDeferred = async {
                     try {
                         val items = db.collection("menu")
@@ -138,7 +196,7 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                             .get()
                             .await()
                             .toObjects(MenuItem::class.java)
-                        
+
                         if (items.isNotEmpty()) {
                             menuItems = items
                             fastCache.put("menu_$restaurantId", items)
@@ -158,7 +216,7 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                             .get()
                             .await()
                             .toObjects(ReviewRestaurant::class.java)
-                        
+
                         if (remoteReviews.isNotEmpty()) {
                             reviews = remoteReviews
                             fastCache.put("reviews_$restaurantId", remoteReviews)
@@ -185,7 +243,6 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
                 val snapshot = db.collection("restaurants").document(restaurantId).get().await()
                 restaurant = snapshot.toObject(MapRestaurant::class.java)?.copy(id = snapshot.id)
             } catch (e: Exception) {
-                // Log or handle error
             }
         }
     }
@@ -215,18 +272,20 @@ class RestaurantDetailViewModel(application: Application) : AndroidViewModel(app
     private fun ReviewRestaurant.toEntity() = ReviewEntity(
         id = id,
         restaurant = restaurant,
+        userId = userId,
         name = name,
         rating = rating,
         comment = comment,
         date = date,
         avatar = avatar,
         avatarColor = avatarColor,
-        createdAt = createdAt?.seconds // Store as seconds long
+        createdAt = createdAt?.seconds
     )
 
     private fun ReviewEntity.toReviewRestaurant() = ReviewRestaurant(
         id = id,
         restaurant = restaurant,
+        userId = userId,
         name = name,
         rating = rating,
         comment = comment,

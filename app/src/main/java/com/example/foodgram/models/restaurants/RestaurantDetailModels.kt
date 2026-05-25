@@ -5,7 +5,6 @@ import com.google.firebase.firestore.PropertyName
 import com.example.foodgram.models.map.PointPosition
 import com.google.firebase.Timestamp
 
-
 data class MapRestaurant(
     val id: String = "",
     val name: String = "",
@@ -54,6 +53,7 @@ data class MenuItem(
 data class ReviewRestaurant(
     val id: String = "",
     val restaurant: String = "",
+    val userId: String = "",
     val name: String = "",
     val rating: Int = 0,
     val comment: String = "",

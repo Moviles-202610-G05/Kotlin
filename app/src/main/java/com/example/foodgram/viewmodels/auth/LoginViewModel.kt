@@ -15,10 +15,10 @@ class LoginViewModel : ViewModel() {
 
     var form by mutableStateOf(LoginForm())
         private set
-    
+
     var isLoading by mutableStateOf(false)
         private set
-    
+
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
@@ -62,6 +62,7 @@ class LoginViewModel : ViewModel() {
                                 val userDoc = documents.documents[0]
                                 UserSession.currentUserDocId = userDoc.id
                                 UserSession.currentUserRole = userDoc.getString("roll")
+                                UserSession.currentUserName = userDoc.getString("name") // Saved name to session
                                 isLoading = false
                                 onSuccess()
                             } else {
@@ -72,13 +73,14 @@ class LoginViewModel : ViewModel() {
                                     .addOnSuccessListener { emailDocs ->
                                         if (!emailDocs.isEmpty) {
                                             val userDoc = emailDocs.documents[0]
-                                            
+
                                             // Update the document with the UID for future logins
                                             db.collection("user").document(userDoc.id)
                                                 .update("uid", uid)
-                                            
+
                                             UserSession.currentUserDocId = userDoc.id
                                             UserSession.currentUserRole = userDoc.getString("roll")
+                                            UserSession.currentUserName = userDoc.getString("name") // Saved name to session
                                             isLoading = false
                                             onSuccess()
                                         } else {
@@ -99,8 +101,8 @@ class LoginViewModel : ViewModel() {
                 errorMessage = when (exception.message) {
                     null -> "Authentication failed"
                     else -> if (exception.message!!.contains("password")) "Incorrect password"
-                           else if (exception.message!!.contains("no user")) "User not found"
-                           else exception.localizedMessage
+                    else if (exception.message!!.contains("no user")) "User not found"
+                    else exception.localizedMessage
                 }
             }
     }

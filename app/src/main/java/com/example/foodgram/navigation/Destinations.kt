@@ -55,3 +55,7 @@ object ForgotPassword
 
 @Serializable
 object NutritionGoals
+
+
+@Serializable
+data class UserReviews(val userId: String)

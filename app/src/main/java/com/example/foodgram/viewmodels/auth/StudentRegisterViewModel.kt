@@ -67,17 +67,16 @@ class StudentRegisterViewModel : ViewModel() {
             errorMessage = "University ID must only contain numbers"
         }
     }
-    
-    // Preferences logic
+
     val availablePreferences = listOf(
-        "Vegan", "Fast Food", "Keto", "Gluten-Free", 
-        "Vegetarian", "Desserts", "Healthy", "Pizza", 
+        "Vegan", "Fast Food", "Keto", "Gluten-Free",
+        "Vegetarian", "Desserts", "Healthy", "Pizza",
         "Sushi", "Burgers", "Mexican", "Italian"
     )
 
     var isLoading by mutableStateOf(false)
         private set
-    
+
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
@@ -100,7 +99,6 @@ class StudentRegisterViewModel : ViewModel() {
         isLoading = true
         errorMessage = null
 
-        // 1. Create user in Firebase Auth
         auth.createUserWithEmailAndPassword(form.email, form.password)
             .addOnSuccessListener { authResult ->
                 val uid = authResult.user?.uid
@@ -115,11 +113,14 @@ class StudentRegisterViewModel : ViewModel() {
                         preferences = form.selectedPreferences
                     )
 
-                    // 2. Save additional data to Firestore
                     db.collection("user")
                         .add(user)
                         .addOnSuccessListener { documentReference ->
+                            // Update all session variables locally to bypass needing a fresh login
                             UserSession.currentUserDocId = documentReference.id
+                            UserSession.currentUserRole = UserRole.ESTUDIANTE.name
+                            UserSession.currentUserName = form.name
+
                             isLoading = false
                             onSuccess()
                         }

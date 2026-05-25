@@ -29,7 +29,7 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun onOwnerNameChange(newValue: String) {
         if (newValue.length < 25) {
-                form = form.copy(ownerName = newValue)
+            form = form.copy(ownerName = newValue)
             errorMessage = null
         } else {
             errorMessage = "Owner name must be less than 25 characters"
@@ -108,11 +108,9 @@ class RestaurantRegisterViewModel : ViewModel() {
 
     fun addMenuItemStepByStep(item: MenuItem) {
         val index = menuItems.size
-        // 1. Añadir localmente con estado de carga
         val temporaryItem = item.copy(isUploading = true)
         menuItems.add(temporaryItem)
 
-        // 2. Iniciar subida de imagen y registro en Firestore
         uploadImage(item.imageUri, "menu") { imageUrl ->
             val finalImageUrl = imageUrl ?: ""
             val menuData = hashMapOf(
@@ -125,10 +123,8 @@ class RestaurantRegisterViewModel : ViewModel() {
                 "availability" to (if (item.inStock) 1 else 0)
             )
 
-            // Guardar en Firestore
             db.collection("menu").add(menuData)
                 .addOnSuccessListener { docRef ->
-                    // Actualizar el item en la lista local para quitar el loading
                     val updatedItem = temporaryItem.copy(
                         id = docRef.id,
                         image = finalImageUrl,
@@ -140,7 +136,6 @@ class RestaurantRegisterViewModel : ViewModel() {
                 }
                 .addOnFailureListener {
                     errorMessage = "Failed to register dish: ${it.localizedMessage}"
-                    // Marcar como fallido o permitir reintento
                     if (index < menuItems.size) {
                         menuItems[index] = temporaryItem.copy(isUploading = false)
                     }
@@ -157,15 +152,10 @@ class RestaurantRegisterViewModel : ViewModel() {
         isLoading = true
         errorMessage = null
 
-        // 1. Upload Restaurant Image
         uploadImage(form.restaurantImageUri, "restaurants") { restaurantImageUrl ->
-            // 2. Upload all Menu Item Images
             uploadMenuItems(0, mutableListOf()) { menuWithUrls ->
-                // 3. Save Restaurant to Firestore
                 saveRestaurantToFirestore(restaurantImageUrl) {
-                    // 4. Save Menu Items to Firestore
                     saveMenuItemsToFirestore(menuWithUrls) {
-                        // 5. Save Owner User for Login
                         saveOwnerUser(onSuccess)
                     }
                 }
@@ -225,7 +215,7 @@ class RestaurantRegisterViewModel : ViewModel() {
 
         db.collection("restaurants").document(form.restaurantName).set(restaurant)
             .addOnSuccessListener { onComplete() }
-            .addOnFailureListener { 
+            .addOnFailureListener {
                 errorMessage = "Firestore Error: ${it.localizedMessage}"
                 isLoading = false
             }
@@ -260,7 +250,6 @@ class RestaurantRegisterViewModel : ViewModel() {
     }
 
     private fun saveOwnerUser(onSuccess: () -> Unit) {
-        // 1. Create user in Firebase Auth
         auth.createUserWithEmailAndPassword(form.email, form.password)
             .addOnSuccessListener { authResult ->
                 val uid = authResult.user?.uid
@@ -274,12 +263,15 @@ class RestaurantRegisterViewModel : ViewModel() {
                         restaurantName = form.restaurantName
                     )
 
-                    // 2. Save data to Firestore
                     db.collection("user").add(user)
                         .addOnSuccessListener { documentReference ->
+                            // Save auth data to session to prevent missing name in UI
                             UserSession.currentUserDocId = documentReference.id
+                            UserSession.currentUserRole = UserRole.RESTAURANTE.name
+                            UserSession.currentUserName = form.ownerName
+
                             isLoading = false
-                            onSuccess() 
+                            onSuccess()
                         }
                         .addOnFailureListener {
                             errorMessage = "Auth successful but database failed: ${it.localizedMessage}"

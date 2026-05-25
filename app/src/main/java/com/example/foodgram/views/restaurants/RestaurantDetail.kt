@@ -26,6 +26,7 @@ import com.example.foodgram.models.restaurants.ReviewRestaurant
 import com.example.foodgram.ui.theme.FoodGramOrange
 import com.example.foodgram.viewmodels.restaurants.RestaurantDetailViewModel
 import com.example.foodgram.models.restaurants.MapRestaurant
+import com.example.foodgram.utils.UserSession
 import com.example.foodgram.views.components.FoodGramNavigationBar
 import com.example.foodgram.views.components.FoodGramScreen
 import java.text.SimpleDateFormat
@@ -50,11 +51,12 @@ fun RestaurantDetailScreen(
     val restaurant = viewModel.restaurant ?: initialData
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Menu", "Location", "Reviews")
+    var showReviewDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = {
             FoodGramNavigationBar(
-                currentScreen = FoodGramScreen.SEARCH, // Detailed from Search context mostly
+                currentScreen = FoodGramScreen.SEARCH,
                 onNavigateToFeed = onNavigateToFeed,
                 onNavigateToSearch = onNavigateToSearch,
                 onNavigateToProfile = onNavigateToProfile,
@@ -63,6 +65,22 @@ fun RestaurantDetailScreen(
             )
         }
     ) { padding ->
+        if (showReviewDialog) {
+            WriteReviewDialog(
+                onDismiss = { showReviewDialog = false },
+                onSubmit = { rating, comment ->
+                    viewModel.submitReview(
+                        rating = rating,
+                        comment = comment,
+                        userId = UserSession.currentUserDocId ?: "",
+                        userName = UserSession.currentUserName ?: "User",
+                        avatarUrl = UserSession.currentProfilePhotoUrl
+                    )
+                    showReviewDialog = false
+                }
+            )
+        }
+
         if (viewModel.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = FoodGramOrange)
@@ -103,8 +121,7 @@ fun RestaurantDetailScreen(
                             model = "https://maps.googleapis.com/maps/api/staticmap?center=${restaurant.lat},${restaurant.long}&zoom=15&size=600x300&key=${com.example.foodgram.BuildConfig.MAPS_API_KEY}"
                         )
                     )
-                    
-                    // Badges
+
                     Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
                         Surface(color = FoodGramOrange, shape = RoundedCornerShape(8.dp)) {
                             Text("TOP RATED", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
@@ -126,14 +143,13 @@ fun RestaurantDetailScreen(
                         Text(" ${restaurant.rating}", fontWeight = FontWeight.Bold)
                     }
                     Text("Open until ${restaurant.time} • ${restaurant.nuberReviews}+ reviews", color = Color.Gray, fontSize = 12.sp)
-                    
+
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Availability Card
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFFF0FFF4), // Light green
+                        color = Color(0xFFF0FFF4),
                         border = BorderStroke(1.dp, Color(0xFFC6F6D5))
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -178,7 +194,6 @@ fun RestaurantDetailScreen(
                     }
                 }
 
-                // Tabs
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
@@ -202,16 +217,68 @@ fun RestaurantDetailScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tab Content
-                // Inside RestaurantDetailScreen
                 when (selectedTab) {
                     0 -> MenuSection(viewModel.menuItems)
-                    1 -> LocationSection(restaurant, onNavigateToMap) // Pass the callback here
-                    2 -> ReviewsSection(viewModel.reviews)
+                    1 -> LocationSection(restaurant, onNavigateToMap)
+                    2 -> ReviewsSection(viewModel.reviews) { showReviewDialog = true }
                 }
             }
         }
     }
+}
+
+@Composable
+fun WriteReviewDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (Int, String) -> Unit
+) {
+    var rating by remember { mutableIntStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Write a Review", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    for (i in 1..5) {
+                        Icon(
+                            imageVector = if (i <= rating) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = "Rate $i stars",
+                            tint = FoodGramOrange,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clickable { rating = i }
+                                .padding(4.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Share your experience") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 5
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSubmit(rating, comment) },
+                enabled = rating > 0 && comment.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = FoodGramOrange)
+            ) {
+                Text("Submit")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        }
+    )
 }
 
 @Composable
@@ -302,7 +369,6 @@ fun LocationSection(
             shape = RoundedCornerShape(24.dp),
             color = Color.LightGray
         ) {
-            //Place holder
             val lat = restaurant.lat
             val lng = restaurant.long
             val apiKey = com.example.foodgram.BuildConfig.MAPS_API_KEY
@@ -331,7 +397,7 @@ fun LocationSection(
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
-            onClick = { onNavigateToMap(restaurant.id) }, // Triggers navigation to MapView
+            onClick = { onNavigateToMap(restaurant.id) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = FoodGramOrange)
@@ -344,56 +410,79 @@ fun LocationSection(
 }
 
 @Composable
-fun ReviewsSection(reviews: List<ReviewRestaurant>) {
+fun ReviewsSection(reviews: List<ReviewRestaurant>, onWriteReviewClick: () -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.StarBorder, null, tint = FoodGramOrange, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Reviews", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.StarBorder, null, tint = FoodGramOrange, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reviews", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+            TextButton(onClick = onWriteReviewClick) {
+                Text("+ Write a Review", color = FoodGramOrange, fontWeight = FontWeight.Bold)
+            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        reviews.forEach { review ->
-            Column(modifier = Modifier.padding(vertical = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(
-                                try {
-                                    Color(android.graphics.Color.parseColor(review.avatarColor))
-                                } catch (e: Exception) {
-                                    Color.LightGray
-                                }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            review.avatar.ifEmpty { review.name.take(1).uppercase() },
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(review.name, fontWeight = FontWeight.Bold)
-                        Text(review.date, color = Color.Gray, fontSize = 10.sp)
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Row {
-                        repeat(5) { i ->
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = if (i < review.rating) FoodGramOrange else Color.LightGray,
-                                modifier = Modifier.size(14.dp)
-                            )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (reviews.isEmpty()) {
+            Text("No reviews yet. Be the first!", color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
+        } else {
+            reviews.forEach { review ->
+                Column(modifier = Modifier.padding(vertical = 12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    try {
+                                        Color(android.graphics.Color.parseColor(review.avatarColor))
+                                    } catch (e: Exception) {
+                                        Color.LightGray
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (review.avatar.isNotEmpty()) {
+                                AsyncImage(
+                                    model = review.avatar,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    review.name.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(review.name, fontWeight = FontWeight.Bold)
+                            Text(review.date, color = Color.Gray, fontSize = 10.sp)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        Row {
+                            repeat(5) { i ->
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = if (i < review.rating) FoodGramOrange else Color.LightGray,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(review.comment, fontSize = 14.sp, color = Color.DarkGray)
+                    HorizontalDivider(modifier = Modifier.padding(top = 16.dp), color = Color(0xFFF7FAFC))
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(review.comment, fontSize = 14.sp, color = Color.DarkGray)
-                HorizontalDivider(modifier = Modifier.padding(top = 16.dp), color = Color(0xFFF7FAFC))
             }
         }
     }

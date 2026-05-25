@@ -8,6 +8,7 @@ object UserSession {
     private const val PREFS_NAME = "FoodGramPrefs"
     private const val KEY_DOC_ID = "userDocId"
     private const val KEY_USER_ROLE = "userRole"
+    private const val KEY_USER_NAME = "userName" // Added to fix the compilation error
     private const val KEY_PROFILE_PHOTO_PATH = "profilePhotoPath"
     private const val KEY_PROFILE_PHOTO_URL = "profilePhotoUrl"
 
@@ -29,6 +30,13 @@ object UserSession {
         get() = sharedPrefs?.getString(KEY_USER_ROLE, null)
         set(value) {
             sharedPrefs?.edit()?.putString(KEY_USER_ROLE, value)?.apply()
+        }
+
+    // New property to handle the user's name
+    var currentUserName: String?
+        get() = sharedPrefs?.getString(KEY_USER_NAME, null)
+        set(value) {
+            sharedPrefs?.edit()?.putString(KEY_USER_NAME, value)?.apply()
         }
 
     var currentProfilePhotoPath: String?
@@ -53,6 +61,7 @@ object UserSession {
         FirebaseAuth.getInstance().signOut()
         currentUserDocId = null
         currentUserRole = null
+        currentUserName = null // Cleared on logout
         currentProfilePhotoPath = null
         currentProfilePhotoUrl = null
     }
