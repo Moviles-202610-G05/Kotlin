@@ -9,6 +9,9 @@ interface RestaurantDao {
     @Query("SELECT * FROM restaurants")
     fun getAllRestaurants(): Flow<List<RestaurantEntity>>
 
+    @Query("SELECT * FROM restaurants")
+    suspend fun getAllRestaurantsDirect(): List<RestaurantEntity>
+
     @Query("SELECT * FROM restaurants WHERE id = :id")
     suspend fun getRestaurantById(id: String): RestaurantEntity?
 
@@ -17,4 +20,9 @@ interface RestaurantDao {
 
     @Query("DELETE FROM restaurants")
     suspend fun deleteAll()
+
+    // Returns the oldest cachedAt timestamp in the table.
+    // MIN means: if even the oldest row is within TTL, the whole cache is fresh.
+    @Query("SELECT MIN(cachedAt) FROM restaurants")
+    suspend fun getOldestCachedAt(): Long?
 }

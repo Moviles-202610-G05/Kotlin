@@ -190,6 +190,38 @@ fun MapScreen(
         }
 
         Column(modifier = Modifier.fillMaxWidth().padding(top = 48.dp)) {
+            // Cached-data banner — visible when Room TTL cache is being served instead of live Firestore
+            if (viewModel.isShowingCachedData && !viewModel.isLoading) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFF8E1),
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.History, contentDescription = null, tint = Color(0xFFE65100), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Showing cached data",
+                            fontSize = 12.sp,
+                            color = Color(0xFFE65100),
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = { viewModel.loadData() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text("Refresh", fontSize = 12.sp, color = FoodGramOrange)
+                        }
+                    }
+                }
+            }
+
             // Search Bar
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(28.dp), color = Color.White, shadowElevation = 4.dp) {
