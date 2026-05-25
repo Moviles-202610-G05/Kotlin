@@ -59,3 +59,6 @@ object NutritionGoals
 
 @Serializable
 data class UserReviews(val userId: String)
+
+@Serializable
+object Saved

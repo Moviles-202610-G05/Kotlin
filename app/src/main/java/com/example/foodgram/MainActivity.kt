@@ -34,6 +34,7 @@ import com.example.foodgram.views.auth.ForgotPasswordScreen
 import com.example.foodgram.views.settings.NutritionGoalsScreen
 import com.example.foodgram.views.tracker.TrackerScreen
 import com.example.foodgram.utils.UserSession
+import com.example.foodgram.views.profile.SavedScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -197,7 +198,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToReviews = {
                                     navController.navigate(UserReviews(UserSession.currentUserDocId ?: ""))
                                 },
-                                onNavigateToSaved = { /* TODO */ },
+                                onNavigateToSaved = { navController.navigate(Saved) },
                                 onNavigateToNutritionGoals = { navController.navigate(NutritionGoals) },
                                 onNavigateToPrivacySettings = { /* TODO */ },
                                 onLogout = {
@@ -215,6 +216,15 @@ class MainActivity : ComponentActivity() {
                             UserReviewsScreen(
                                 userId = reviewsRoute.userId,
                                 onBackClick = { navController.navigateUp() }
+                            )
+                        }
+
+                        composable<Saved> {
+                            SavedScreen(
+                                onNavigateBack = { navController.navigateUp() },
+                                onNavigateToRestaurantDetail = { id ->
+                                    navController.navigate(RestaurantDetail(id))
+                                }
                             )
                         }
 

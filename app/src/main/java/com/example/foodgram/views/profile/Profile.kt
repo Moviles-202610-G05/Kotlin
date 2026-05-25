@@ -28,12 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.foodgram.navigation.PersonalInfo
 import com.example.foodgram.ui.theme.OrangeFoodGram
 import com.example.foodgram.utils.UserSession
+import com.example.foodgram.viewmodels.saved.SavedViewModel
 import com.example.foodgram.views.components.FoodGramNavigationBar
 import com.example.foodgram.views.components.FoodGramScreen
 import com.google.firebase.auth.FirebaseAuth
@@ -52,8 +54,10 @@ fun UserScreen(
     onNavigateToSaved: () -> Unit,
     onNavigateToNutritionGoals: () -> Unit,
     onNavigateToPrivacySettings: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    savedViewModel: SavedViewModel = viewModel()
 ) {
+    val savedItems by savedViewModel.savedItems.collectAsState()
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
@@ -68,7 +72,7 @@ fun UserScreen(
 
     var ordersCount by remember { mutableStateOf(0) }
     var reviewsCount by remember { mutableStateOf(0) }
-    var savedCount by remember { mutableStateOf(0) }
+    val savedCount = savedItems.size
 
     var profilePhotoPath by remember { mutableStateOf(UserSession.currentProfilePhotoPath) }
     var profilePhotoUrl by remember { mutableStateOf(UserSession.currentProfilePhotoUrl) }
@@ -92,7 +96,6 @@ fun UserScreen(
 
                         ordersCount = snapshot.getLong("ordersCount")?.toInt() ?: 0
                         reviewsCount = snapshot.getLong("reviewsCount")?.toInt() ?: 0
-                        savedCount = snapshot.getLong("savedCount")?.toInt() ?: 0
 
                         profilePhotoPath = snapshot.getString("photoPath") ?: profilePhotoPath
                         profilePhotoUrl = snapshot.getString("photoUrl") ?: profilePhotoUrl
