@@ -34,6 +34,7 @@ import com.example.foodgram.views.auth.ForgotPasswordScreen
 import com.example.foodgram.views.settings.NutritionGoalsScreen
 import com.example.foodgram.views.tracker.TrackerScreen
 import com.example.foodgram.utils.UserSession
+import com.example.foodgram.views.feed.PostCommentsScreen
 import com.example.foodgram.views.profile.SavedScreen
 
 class MainActivity : ComponentActivity() {
@@ -136,6 +137,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToMap = { id -> navController.navigate(RestaurantsMap(id)) },
                                 onNavigateToRestaurantDetail = { id ->
                                     navController.navigate(RestaurantDetail(id))
+                                },
+                                onNavigateToComments = { postId ->
+                                    navController.navigate(PostComments(postId))
                                 }
                             )
                         }
@@ -216,6 +220,14 @@ class MainActivity : ComponentActivity() {
                             UserReviewsScreen(
                                 userId = reviewsRoute.userId,
                                 onBackClick = { navController.navigateUp() }
+                            )
+                        }
+
+                        composable<PostComments> { backStackEntry ->
+                            val route: PostComments = backStackEntry.toRoute()
+                            PostCommentsScreen(
+                                postId = route.postId,
+                                onNavigateBack = { navController.navigateUp() }
                             )
                         }
 

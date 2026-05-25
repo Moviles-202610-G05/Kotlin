@@ -62,3 +62,6 @@ data class UserReviews(val userId: String)
 
 @Serializable
 object Saved
+
+@Serializable
+data class PostComments(val postId: String)

@@ -44,9 +44,9 @@ fun HomeScreen(
     onNavigateToMenu: () -> Unit = {},
     onNavigateToMap: (String?) -> Unit = {},
     onNavigateToRestaurantDetail: (String) -> Unit = {},
+    onNavigateToComments: (String) -> Unit = {},
     viewModel: FeedViewModel = viewModel()
 ) {
-    var showCommentDialog by remember { mutableStateOf<Post?>(null) }
 
     Scaffold(
         topBar = {
@@ -112,22 +112,11 @@ fun HomeScreen(
                         PostItem(
                             post = post,
                             onLikeClick = { viewModel.toggleLike(post) },
-                            onCommentClick = { showCommentDialog = post },
+                            onCommentClick = { onNavigateToComments(post.id) },
                             onRestaurantClick = { onNavigateToRestaurantDetail(post.restaurantId) }
                         )
                     }
                 }
-            }
-
-            if (showCommentDialog != null) {
-                CommentDialog(
-                    post = showCommentDialog!!,
-                    onDismiss = { showCommentDialog = null },
-                    onSendComment = { text ->
-                        viewModel.addComment(showCommentDialog!!.id, text)
-                        showCommentDialog = null
-                    }
-                )
             }
         }
     }
