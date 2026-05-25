@@ -9,12 +9,16 @@ import androidx.work.WorkerParameters
 import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.workDataOf
+import android.util.Base64
 import com.example.foodgram.data.local.AppDatabase
+import com.example.foodgram.models.tracker.MealAnalysis
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 /**
  * Equivalent to Flutter's MealAnalysisIsolate: runs entirely off the main thread,
@@ -32,6 +36,7 @@ class PendingMealWorker(
 
     private val dao = AppDatabase.getDatabase(context).pendingMealDao()
     private val firestore = FirebaseFirestore.getInstance()
+    private val storage = FirebaseStorage.getInstance()
     private val facade = TrackerFacade()
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -49,6 +54,12 @@ class PendingMealWorker(
                     analyzeWithRetry(meal.imageBase64)
                 }
 
+                val imageBytes = Base64.decode(meal.imageBase64, Base64.DEFAULT)
+                val storageRef = storage.reference
+                    .child("AIimages/offline/${UUID.randomUUID()}.jpg")
+                storageRef.putBytes(imageBytes).await()
+                val imageUrl = storageRef.downloadUrl.await().toString()
+
                 val firstComponent = analysis.components.firstOrNull()
                 val mealData = hashMapOf(
                     "userEmail" to userEmail,
@@ -58,7 +69,7 @@ class PendingMealWorker(
                     "totalProteinG" to analysis.macronutrientsTotals.proteinG,
                     "totalCarbsG" to analysis.macronutrientsTotals.carbsG,
                     "totalFatG" to analysis.macronutrientsTotals.fatG,
-                    "imagePath" to "",
+                    "imagePath" to imageUrl,
                     "confidence" to analysis.confidence,
                     "food" to (firstComponent?.food ?: ""),
                     "estimated_portion" to (firstComponent?.portion ?: ""),
@@ -80,12 +91,12 @@ class PendingMealWorker(
     }
 
     // Mirrors Flutter's 3-attempt retry loop in MealAnalysisIsolate
-    private suspend fun analyzeWithRetry(base64Image: String) =
+    private suspend fun analyzeWithRetry(base64Image: String): MealAnalysis =
         run {
             var lastException: Exception? = null
             repeat(3) { attempt ->
                 try {
-                    return facade.analyzeFromBase64(base64Image)
+                    return@run facade.analyzeFromBase64(base64Image)
                 } catch (e: Exception) {
                     lastException = e
                     if (attempt < 2) delay(3_000)
